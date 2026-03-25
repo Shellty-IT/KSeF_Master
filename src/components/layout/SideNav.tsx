@@ -63,6 +63,10 @@ export default function SideNav() {
                         <span className="icon" aria-hidden>📤</span>
                         {!isCollapsed && <span className="nav-label">Faktury wystawione</span>}
                     </NavLink>
+                    <NavLink className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} to="/invoices/imported">
+                        <span className="icon" aria-hidden>📩</span>
+                        {!isCollapsed && <span className="nav-label">Importowane</span>}
+                    </NavLink>
                     <NavLink className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} to="/clients">
                         <span className="icon" aria-hidden>👥</span>
                         {!isCollapsed && <span className="nav-label">Klienci</span>}
