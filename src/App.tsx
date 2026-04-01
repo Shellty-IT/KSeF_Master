@@ -1,6 +1,9 @@
 // src/App.tsx
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import StartView from './views/start/StartView';
+import LoginView from './views/start/LoginView';
+import RegisterView from './views/start/RegisterView';
 import Dashboard from './views/dashboard/Dashboard';
 import ReceivedInvoices from './views/received/ReceivedInvoices';
 import IssuedInvoices from './views/issued/IssuedInvoices';
@@ -9,6 +12,33 @@ import ImportedDrafts from './views/imported/ImportedDrafts';
 import ClientsView from './views/clients/ClientsView';
 import Reports from './views/reports/Reports';
 import Settings from './views/settings/Settings';
+import type { ReactNode } from 'react';
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+    const { isAppAuthenticated, isLoading } = useAuth();
+
+    if (isLoading) {
+        return (
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100vh',
+                background: '#0e1116',
+                color: '#a4a9b6',
+                fontSize: '16px',
+            }}>
+                ⏳ Ładowanie...
+            </div>
+        );
+    }
+
+    if (!isAppAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
+
+    return <>{children}</>;
+}
 
 function InvoiceDetailsPlaceholder() {
     return (
@@ -19,22 +49,32 @@ function InvoiceDetailsPlaceholder() {
     );
 }
 
+function AppRoutes() {
+    return (
+        <Routes>
+            <Route path="/" element={<StartView />} />
+            <Route path="/login" element={<LoginView />} />
+            <Route path="/register" element={<RegisterView />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/invoices/received" element={<ProtectedRoute><ReceivedInvoices /></ProtectedRoute>} />
+            <Route path="/invoices/issued" element={<ProtectedRoute><IssuedInvoices /></ProtectedRoute>} />
+            <Route path="/invoices/new" element={<ProtectedRoute><NewInvoice /></ProtectedRoute>} />
+            <Route path="/invoices/imported" element={<ProtectedRoute><ImportedDrafts /></ProtectedRoute>} />
+            <Route path="/invoices/:ksefId" element={<ProtectedRoute><InvoiceDetailsPlaceholder /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute><ClientsView /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+    );
+}
+
 export default function App() {
     return (
-        <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <Routes>
-                <Route path="/" element={<StartView />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/invoices/received" element={<ReceivedInvoices />} />
-                <Route path="/invoices/issued" element={<IssuedInvoices />} />
-                <Route path="/invoices/new" element={<NewInvoice />} />
-                <Route path="/invoices/imported" element={<ImportedDrafts />} />
-                <Route path="/invoices/:ksefId" element={<InvoiceDetailsPlaceholder />} />
-                <Route path="/clients" element={<ClientsView />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-        </HashRouter>
+        <AuthProvider>
+            <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <AppRoutes />
+            </HashRouter>
+        </AuthProvider>
     );
 }

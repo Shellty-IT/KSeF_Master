@@ -6,6 +6,8 @@ import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
 import BankAccountInput from '../../components/form/BankAccountInput';
+import KsefSetupModal from '../../components/modal/KsefSetupModal';
+import { useAuth } from '../../context/AuthContext';
 import {
     getSettings,
     saveSettings,
@@ -23,11 +25,23 @@ import {
 import type { AlertSettings } from '../../types/fraud';
 
 export default function Settings() {
+    const {
+        user,
+        isKsefConnected,
+        ksefTokenExpired,
+        needsCompanySetup,
+        connectKsef,
+    } = useAuth();
+
     const [settings, setSettings] = useState<AppSettings>(getSettings());
     const [seller, setSeller] = useState<SellerProfile>(getSeller());
     const [alertSettings, setAlertSettings] = useState<AlertSettings>(getAlertSettings());
     const [info, setInfo] = useState<string | null>(null);
     const [errors, setErrors] = useState<string[]>([]);
+    const [showTokenModal, setShowTokenModal] = useState(false);
+    const [showSetupModal, setShowSetupModal] = useState(false);
+    const [isConnecting, setIsConnecting] = useState(false);
+    const [connectError, setConnectError] = useState<string | null>(null);
 
     useEffect(() => {
         setSettings(getSettings());
@@ -128,6 +142,33 @@ export default function Settings() {
         setTimeout(() => setInfo(null), 1600);
     }
 
+    async function handleConnectKsef() {
+        setIsConnecting(true);
+        setConnectError(null);
+
+        const result = await connectKsef();
+
+        setIsConnecting(false);
+
+        if (!result.success) {
+            if (result.tokenExpired) {
+                setShowTokenModal(true);
+            } else {
+                setConnectError(result.error || 'Błąd połączenia z KSeF');
+            }
+        } else {
+            setInfo('Połączono z KSeF pomyślnie.');
+            setTimeout(() => setInfo(null), 2000);
+        }
+    }
+
+    function handleTokenSuccess() {
+        setShowTokenModal(false);
+        setShowSetupModal(false);
+        setInfo('Token KSeF zaktualizowany. Połącz się ponownie.');
+        setTimeout(() => setInfo(null), 2000);
+    }
+
     return (
         <div className="dash-root">
             <SideNav />
@@ -161,9 +202,117 @@ export default function Settings() {
                         )}
 
                         <div className="card">
+                            <h3>🔗 Połączenie z KSeF</h3>
+
+                            {user?.company ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                                        <div>
+                                            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Firma</span>
+                                            <div style={{ fontSize: '15px', color: 'var(--text)', fontWeight: 600 }}>
+                                                {user.company.companyName}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>NIP</span>
+                                            <div style={{
+                                                fontSize: '15px',
+                                                color: 'var(--text)',
+                                                fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+                                            }}>
+                                                {user.company.nip}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Status KSeF</span>
+                                            <div style={{
+                                                fontSize: '14px',
+                                                color: isKsefConnected ? 'var(--success)' : 'var(--danger)',
+                                                fontWeight: 600,
+                                            }}>
+                                                {isKsefConnected ? '🟢 Połączony' : '🔴 Niepołączony'}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {(ksefTokenExpired || !user.company.hasKsefToken) && (
+                                        <div style={{
+                                            background: 'rgba(239, 68, 68, 0.1)',
+                                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                                            borderRadius: '8px',
+                                            padding: '12px',
+                                            color: '#fca5a5',
+                                            fontSize: '14px',
+                                        }}>
+                                            ⚠️ {ksefTokenExpired
+                                            ? 'Token KSeF wygasł. Zaktualizuj token, aby kontynuować pracę z KSeF.'
+                                            : 'Token KSeF nie jest skonfigurowany.'}
+                                        </div>
+                                    )}
+
+                                    {connectError && (
+                                        <div style={{
+                                            background: 'rgba(239, 68, 68, 0.1)',
+                                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                                            borderRadius: '8px',
+                                            padding: '12px',
+                                            color: '#fca5a5',
+                                            fontSize: '14px',
+                                        }}>
+                                            ⚠️ {connectError}
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                        {!isKsefConnected && (
+                                            <button
+                                                className="btn-light"
+                                                onClick={handleConnectKsef}
+                                                disabled={isConnecting}
+                                                style={{
+                                                    background: 'var(--accent)',
+                                                    color: '#001018',
+                                                    border: 'none',
+                                                    fontWeight: 700,
+                                                }}
+                                            >
+                                                {isConnecting ? '⏳ Łączenie...' : '🔗 Połącz z KSeF'}
+                                            </button>
+                                        )}
+                                        <button
+                                            className="btn-light"
+                                            onClick={() => setShowTokenModal(true)}
+                                        >
+                                            🔑 Zmień token KSeF
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : needsCompanySetup ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <p style={{ color: 'var(--muted)', fontSize: '14px', margin: 0 }}>
+                                        Firma nie jest jeszcze skonfigurowana. Skonfiguruj połączenie z KSeF, aby móc wystawiać i pobierać faktury.
+                                    </p>
+                                    <button
+                                        className="btn-light"
+                                        onClick={() => setShowSetupModal(true)}
+                                        style={{
+                                            background: 'var(--accent)',
+                                            color: '#001018',
+                                            border: 'none',
+                                            fontWeight: 700,
+                                            alignSelf: 'flex-start',
+                                        }}
+                                    >
+                                        🏢 Skonfiguruj firmę
+                                    </button>
+                                </div>
+                            ) : null}
+                        </div>
+
+                        <div className="card">
                             <h3>Profil firmy (Sprzedawca)</h3>
                             <p className="hint" style={{ marginBottom: '16px', color: '#6b7280' }}>
-                                💡 NIP sprzedawcy jest automatycznie pobierany z sesji KSeF podczas logowania.
+                                💡 Dane sprzedawcy używane na fakturach. NIP jest pobierany z konfiguracji KSeF.
                             </p>
                             <label>Nazwa firmy *
                                 <input
@@ -447,6 +596,22 @@ export default function Settings() {
                     </section>
                 </div>
             </main>
+
+            {showTokenModal && (
+                <KsefSetupModal
+                    mode="update-token"
+                    onClose={() => setShowTokenModal(false)}
+                    onSuccess={handleTokenSuccess}
+                />
+            )}
+
+            {showSetupModal && (
+                <KsefSetupModal
+                    mode="setup"
+                    onClose={() => setShowSetupModal(false)}
+                    onSuccess={handleTokenSuccess}
+                />
+            )}
         </div>
     );
 }

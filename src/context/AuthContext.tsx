@@ -1,116 +1,283 @@
 // src/context/AuthContext.tsx
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import * as api from '../services/ksefApi';
+import * as authApi from '../services/authApi';
+import * as ksefApiModule from '../services/ksefApi';
 
 interface AuthState {
-    isAuthenticated: boolean;
+    isAppAuthenticated: boolean;
+    isKsefConnected: boolean;
     isLoading: boolean;
-    nip: string | null;
+    user: authApi.UserInfo | null;
+    ksefNip: string | null;
+    ksefAccessTokenValidUntil: string | null;
     error: string | null;
-    accessTokenValidUntil: string | null;
+    needsCompanySetup: boolean;
+    ksefTokenExpired: boolean;
 }
 
 interface AuthContextType extends AuthState {
-    login: (nip: string, ksefToken: string) => Promise<boolean>;
-    logout: () => Promise<void>;
-    checkSession: () => Promise<void>;
+    loginApp: (email: string, password: string) => Promise<boolean>;
+    registerApp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+    setupCompany: (companyName: string, nip: string, ksefToken: string) => Promise<{ success: boolean; error?: string }>;
+    connectKsef: () => Promise<{ success: boolean; error?: string; tokenExpired?: boolean }>;
+    updateKsefToken: (ksefToken: string) => Promise<{ success: boolean; error?: string }>;
+    logout: () => void;
+    refreshUser: () => Promise<void>;
+    isAuthenticated: boolean;
+    nip: string | null;
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [state, setState] = useState<AuthState>({
-        isAuthenticated: false,
+        isAppAuthenticated: false,
+        isKsefConnected: false,
         isLoading: true,
-        nip: null,
+        user: null,
+        ksefNip: null,
+        ksefAccessTokenValidUntil: null,
         error: null,
-        accessTokenValidUntil: null,
+        needsCompanySetup: false,
+        ksefTokenExpired: false,
     });
 
-    const checkSession = useCallback(async () => {
-        try {
-            const status = await api.getStatus();
-            setState(prev => ({
-                ...prev,
-                isLoading: false,
-                isAuthenticated: status.session.isAuthenticated,
-                nip: status.session.nip,
-                accessTokenValidUntil: status.session.accessTokenValidUntil,
-                error: null,
-            }));
-        } catch (error) {
-            console.error('Failed to check session:', error);
-            setState(prev => ({
-                ...prev,
-                isLoading: false,
-                isAuthenticated: false,
-                error: 'Nie można połączyć się z serwerem',
-            }));
+    const checkExistingSession = useCallback(async () => {
+        const token = authApi.getStoredToken();
+        if (!token) {
+            setState(prev => ({ ...prev, isLoading: false }));
+            return;
+        }
+
+        const meResult = await authApi.getMe();
+        if (!meResult.success || !meResult.data) {
+            authApi.clearStoredToken();
+            setState(prev => ({ ...prev, isLoading: false }));
+            return;
+        }
+
+        const user = meResult.data;
+        const needsSetup = user.company === null;
+
+        setState(prev => ({
+            ...prev,
+            isLoading: false,
+            isAppAuthenticated: true,
+            user,
+            needsCompanySetup: needsSetup,
+            ksefNip: user.company?.nip ?? null,
+        }));
+
+        if (!needsSetup) {
+            try {
+                const statusResult = await ksefApiModule.getStatus();
+                if (statusResult.session.isAuthenticated) {
+                    setState(prev => ({
+                        ...prev,
+                        isKsefConnected: true,
+                        ksefAccessTokenValidUntil: statusResult.session.accessTokenValidUntil,
+                    }));
+                }
+            } catch {
+                // noop
+            }
         }
     }, []);
 
     useEffect(() => {
-        checkSession();
-    }, [checkSession]);
+        checkExistingSession();
+    }, [checkExistingSession]);
 
-    const login = async (nip: string, ksefToken: string): Promise<boolean> => {
+    const loginApp = async (email: string, password: string): Promise<boolean> => {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-        try {
-            const response = await api.login({ nip, ksefToken });
+        const result = await authApi.loginApp({ email, password });
 
-            if (response.success && response.data) {
-                setState({
-                    isAuthenticated: true,
-                    isLoading: false,
-                    nip: response.data.nip,
-                    accessTokenValidUntil: response.data.accessTokenValidUntil,
-                    error: null,
-                });
-                return true;
-            } else {
-                setState(prev => ({
-                    ...prev,
-                    isLoading: false,
-                    error: response.error || 'Błąd logowania',
-                }));
-                return false;
-            }
-        } catch (error) {
-            const message = error instanceof Error ? error.message : 'Błąd połączenia';
+        if (!result.success || !result.data) {
             setState(prev => ({
                 ...prev,
                 isLoading: false,
-                error: message,
+                error: result.error || 'Błąd logowania',
             }));
             return false;
         }
+
+        authApi.setStoredToken(result.data.token);
+        const user = result.data.user;
+        const needsSetup = user.company === null;
+
+        setState(prev => ({
+            ...prev,
+            isLoading: false,
+            isAppAuthenticated: true,
+            user,
+            needsCompanySetup: needsSetup,
+            ksefNip: user.company?.nip ?? null,
+            error: null,
+        }));
+
+        return true;
     };
 
-    const logout = async () => {
+    const registerApp = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
+        setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+        const result = await authApi.register({ email, password, name });
+
+        if (!result.success || !result.data) {
+            setState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: result.error || 'Błąd rejestracji',
+            }));
+            return { success: false, error: result.error };
+        }
+
+        authApi.setStoredToken(result.data.token);
+        const user = result.data.user;
+
+        setState(prev => ({
+            ...prev,
+            isLoading: false,
+            isAppAuthenticated: true,
+            user,
+            needsCompanySetup: true,
+            error: null,
+        }));
+
+        return { success: true };
+    };
+
+    const setupCompany = async (companyName: string, nip: string, ksefToken: string): Promise<{ success: boolean; error?: string }> => {
+        setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+        const result = await authApi.setupCompany({ companyName, nip, ksefToken });
+
+        if (!result.success || !result.data) {
+            setState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: result.error || 'Błąd konfiguracji firmy',
+            }));
+            return { success: false, error: result.error };
+        }
+
+        if (result.data.token) {
+            authApi.setStoredToken(result.data.token);
+        }
+
+        const user = result.data.user;
+
+        setState(prev => ({
+            ...prev,
+            isLoading: false,
+            user,
+            needsCompanySetup: false,
+            ksefNip: user.company?.nip ?? null,
+            error: null,
+        }));
+
+        return { success: true };
+    };
+
+    const connectKsef = async (): Promise<{ success: boolean; error?: string; tokenExpired?: boolean }> => {
+        setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+        const result = await authApi.connectToKsef();
+
+        if (!result.success) {
+            setState(prev => ({
+                ...prev,
+                isLoading: false,
+                ksefTokenExpired: result.tokenExpired || false,
+                error: result.error || 'Błąd połączenia z KSeF',
+            }));
+            return { success: false, error: result.error, tokenExpired: result.tokenExpired };
+        }
+
+        setState(prev => ({
+            ...prev,
+            isLoading: false,
+            isKsefConnected: true,
+            ksefNip: result.data?.nip ?? prev.ksefNip,
+            ksefAccessTokenValidUntil: result.data?.accessTokenValidUntil ?? null,
+            ksefTokenExpired: false,
+            error: null,
+        }));
+
+        return { success: true };
+    };
+
+    const updateKsefTokenFn = async (ksefToken: string): Promise<{ success: boolean; error?: string }> => {
+        const result = await authApi.updateKsefToken({ ksefToken });
+
+        if (!result.success) {
+            return { success: false, error: result.error };
+        }
+
+        if (result.data) {
+            setState(prev => ({
+                ...prev,
+                user: prev.user ? { ...prev.user, company: result.data!.company } : null,
+                ksefTokenExpired: false,
+            }));
+        }
+
+        return { success: true };
+    };
+
+    const refreshUser = async () => {
+        const meResult = await authApi.getMe();
+        if (meResult.success && meResult.data) {
+            setState(prev => ({
+                ...prev,
+                user: meResult.data!,
+                needsCompanySetup: meResult.data!.company === null,
+                ksefNip: meResult.data!.company?.nip ?? null,
+            }));
+        }
+    };
+
+    const logout = () => {
+        authApi.clearStoredToken();
         try {
-            await api.logout();
-        } catch (error) {
-            console.error('Logout error:', error);
+            ksefApiModule.logout().catch(() => {});
+        } catch {
+            // noop
         }
         setState({
-            isAuthenticated: false,
+            isAppAuthenticated: false,
+            isKsefConnected: false,
             isLoading: false,
-            nip: null,
-            accessTokenValidUntil: null,
+            user: null,
+            ksefNip: null,
+            ksefAccessTokenValidUntil: null,
             error: null,
+            needsCompanySetup: false,
+            ksefTokenExpired: false,
         });
     };
 
+    const contextValue: AuthContextType = {
+        ...state,
+        isAuthenticated: state.isAppAuthenticated,
+        nip: state.ksefNip,
+        loginApp,
+        registerApp,
+        setupCompany,
+        connectKsef,
+        updateKsefToken: updateKsefTokenFn,
+        logout,
+        refreshUser,
+    };
+
     return (
-        <AuthContext.Provider value={{ ...state, login, logout, checkSession }}>
+        <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
     const context = useContext(AuthContext);
     if (!context) {

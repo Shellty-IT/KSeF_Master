@@ -3,17 +3,40 @@ import axios, { AxiosError } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-const apiClient = axios.create({
-    baseURL: `${API_BASE_URL}/api/ksef`,
-    headers: { 'Content-Type': 'application/json' },
-    timeout: 120000,
-});
+function createAuthClient(timeout = 120000) {
+    const client = axios.create({
+        baseURL: `${API_BASE_URL}/api/ksef`,
+        headers: { 'Content-Type': 'application/json' },
+        timeout,
+    });
 
-const apiClientWithLongTimeout = axios.create({
-    baseURL: `${API_BASE_URL}/api/ksef`,
-    headers: { 'Content-Type': 'application/json' },
-    timeout: 180000,
-});
+    client.interceptors.request.use((config) => {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    });
+
+    client.interceptors.response.use(
+        (response) => response,
+        (error) => {
+            if (error instanceof AxiosError && error.response?.status === 401) {
+                const currentPath = window.location.hash;
+                if (currentPath !== '#/login' && currentPath !== '#/register' && currentPath !== '#/') {
+                    localStorage.removeItem('authToken');
+                    window.location.hash = '#/login';
+                }
+            }
+            return Promise.reject(error);
+        }
+    );
+
+    return client;
+}
+
+const apiClient = createAuthClient(120000);
+const apiClientWithLongTimeout = createAuthClient(180000);
 
 export interface LoginRequest {
     nip: string;
@@ -162,8 +185,12 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
 }
 
 export async function logout(): Promise<{ success: boolean; message?: string }> {
-    const response = await apiClient.post('/logout');
-    return response.data;
+    try {
+        const response = await apiClient.post('/logout');
+        return response.data;
+    } catch {
+        return { success: true, message: 'Wylogowano lokalnie' };
+    }
 }
 
 export async function getInvoices(request: InvoiceQueryRequest): Promise<InvoiceQueryResponse> {
@@ -366,13 +393,24 @@ export interface GeneratePdfRequest {
 }
 
 export async function downloadInvoicePdf(request: GeneratePdfRequest): Promise<void> {
+    const token = localStorage.getItem('authToken');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/ksef/invoice/pdf`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(request),
     });
 
     if (!response.ok) {
+        if (response.status === 401) {
+            localStorage.removeItem('authToken');
+            window.location.hash = '#/login';
+            throw new Error('Sesja wygasła. Zaloguj się ponownie.');
+        }
         const error = await response.json().catch(() => ({ error: 'Błąd pobierania PDF' }));
         throw new Error(error.error || 'Nie udało się wygenerować PDF');
     }
