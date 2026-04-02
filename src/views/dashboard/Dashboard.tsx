@@ -9,7 +9,7 @@ import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 
 export default function Dashboard() {
-    const { isAuthenticated, nip } = useAuth();
+    const { isKsefConnected, needsCompanySetup, user, nip } = useAuth();
     const navigate = useNavigate();
 
     const { data: receivedData, isLoading, isFetching, error, refetch } = useQuery({
@@ -34,7 +34,7 @@ export default function Dashboard() {
 
             return response.data?.invoices || [];
         },
-        enabled: isAuthenticated,
+        enabled: isKsefConnected,
         staleTime: 60_000,
     });
 
@@ -58,6 +58,16 @@ export default function Dashboard() {
     const balanceIssued = chartDays.reduce((sum, d) => sum + d.issued, 0);
     const balanceReceived = chartDays.reduce((sum, d) => sum + d.received, 0);
 
+    const subtitleText = useMemo(() => {
+        if (needsCompanySetup) {
+            return 'Skonfiguruj firmę, aby rozpocząć pracę z KSeF';
+        }
+        if (!isKsefConnected) {
+            return `Firma: ${user?.company?.companyName || '—'} • NIP: ${nip || '—'} • Niepołączony z KSeF`;
+        }
+        return `Firma: ${user?.company?.companyName || '—'} • NIP: ${nip || '—'} • Połączony z KSeF`;
+    }, [needsCompanySetup, isKsefConnected, user, nip]);
+
     return (
         <div className="dash-root">
             <SideNav />
@@ -66,23 +76,33 @@ export default function Dashboard() {
                 <div className="dash-content">
                     <header className="dash-header">
                         <h1>Pulpit Główny</h1>
-                        <p className="subtitle">
-                            {isAuthenticated
-                                ? `Zalogowano jako NIP: ${nip}`
-                                : 'Tryb demonstracyjny - zaloguj się, aby pobierać faktury z KSeF'}
-                        </p>
+                        <p className="subtitle">{subtitleText}</p>
                     </header>
 
-                    {!isAuthenticated && (
+                    {needsCompanySetup && (
                         <div className="alert-box warning">
-                            <span className="alert-icon">⚠️</span>
+                            <span className="alert-icon">⚙️</span>
                             <div className="alert-content">
-                                <strong>Nie jesteś zalogowany</strong>
+                                <strong>Firma nie jest skonfigurowana</strong>
                                 <p>
-                                    Aby pobierać faktury z KSeF, musisz się zalogować.{' '}
-                                    <button onClick={() => navigate('/')} className="link-button">
-                                        Przejdź do logowania
-                                    </button>
+                                    Aby pobierać i wystawiać faktury w KSeF, skonfiguruj dane firmy (NIP + token autoryzacyjny).
+                                    Użyj przycisku „Skonfiguruj firmę" w panelu bocznym.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {!needsCompanySetup && !isKsefConnected && (
+                        <div className="alert-box warning">
+                            <span className="alert-icon">🔌</span>
+                            <div className="alert-content">
+                                <strong>Brak połączenia z KSeF</strong>
+                                <p>
+                                    Połącz się z Krajowym Systemem e-Faktur, aby pobierać i wystawiać faktury.
+                                    Użyj przycisku „Połącz z KSeF" w panelu bocznym lub przejdź do{' '}
+                                    <button onClick={() => navigate('/settings')} className="link-button">
+                                        Ustawień
+                                    </button>.
                                 </p>
                             </div>
                         </div>
@@ -92,13 +112,13 @@ export default function Dashboard() {
                         <div className="kpi-card">
                             <div className="kpi-title">Faktury odebrane (ostatni miesiąc)</div>
                             <div className="kpi-value accent">
-                                {isLoading ? '...' : stats.total}
+                                {!isKsefConnected ? '—' : isLoading ? '...' : stats.total}
                             </div>
                         </div>
                         <div className="kpi-card">
                             <div className="kpi-title">Suma brutto (odebrane)</div>
                             <div className="kpi-value">
-                                {isLoading ? '...' : stats.totalGross.toLocaleString('pl-PL', {
+                                {!isKsefConnected ? '—' : isLoading ? '...' : stats.totalGross.toLocaleString('pl-PL', {
                                     style: 'currency',
                                     currency: 'PLN'
                                 })}
@@ -127,7 +147,8 @@ export default function Dashboard() {
                             <button
                                 className="btn-fetch"
                                 onClick={() => refetch()}
-                                disabled={!isAuthenticated || isLoading || isFetching}
+                                disabled={!isKsefConnected || isLoading || isFetching}
+                                title={!isKsefConnected ? 'Połącz się z KSeF, aby pobierać faktury' : ''}
                             >
                                 <span className="btn-icon" aria-hidden>⟳</span>
                                 <span>{isLoading || isFetching ? 'Pobieranie...' : 'Pobierz z KSeF'}</span>
@@ -169,9 +190,9 @@ export default function Dashboard() {
                                     ) : (
                                         <tr>
                                             <td colSpan={6} style={{ textAlign: 'center' }}>
-                                                {isAuthenticated
-                                                    ? 'Brak faktur do wyświetlenia.'
-                                                    : 'Zaloguj się, aby pobrać faktury z KSeF.'}
+                                                {!isKsefConnected
+                                                    ? 'Połącz się z KSeF, aby pobrać faktury.'
+                                                    : 'Brak faktur do wyświetlenia.'}
                                             </td>
                                         </tr>
                                     )}

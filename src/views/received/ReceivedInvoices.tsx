@@ -1,6 +1,7 @@
 // src/views/received/ReceivedInvoices.tsx
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import './ReceivedInvoices.css';
 import '../dashboard/Dashboard.css';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
@@ -9,6 +10,7 @@ import FraudBadge from '../../components/alerts/FraudBadge';
 import { listReceived, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
 import { useInvoiceFilters } from '../../hooks/useInvoiceFilters';
 import { useFraudDetection } from '../../hooks/useFraudDetection';
+import { useAuth } from '../../context/AuthContext';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 
@@ -25,6 +27,8 @@ function buildPageNumbers(current: number, total: number): (number | 'dots')[] {
 }
 
 export default function ReceivedInvoices() {
+    const { isKsefConnected, needsCompanySetup } = useAuth();
+    const navigate = useNavigate();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
@@ -32,6 +36,7 @@ export default function ReceivedInvoices() {
     const query = useQuery<Invoice[], Error>({
         queryKey: ['receivedInvoices'],
         queryFn: () => listReceived(),
+        enabled: isKsefConnected,
         staleTime: 60_000,
     });
 
@@ -120,6 +125,35 @@ export default function ReceivedInvoices() {
                         <p className="subtitle">Lista dokumentów odebranych w KSeF</p>
                     </header>
 
+                    {needsCompanySetup && (
+                        <div className="alert-box warning">
+                            <span className="alert-icon">⚙️</span>
+                            <div className="alert-content">
+                                <strong>Firma nie jest skonfigurowana</strong>
+                                <p>
+                                    Aby pobierać faktury z KSeF, skonfiguruj dane firmy (NIP + token autoryzacyjny).
+                                    Użyj przycisku „Skonfiguruj firmę" w panelu bocznym.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {!needsCompanySetup && !isKsefConnected && (
+                        <div className="alert-box warning">
+                            <span className="alert-icon">🔌</span>
+                            <div className="alert-content">
+                                <strong>Brak połączenia z KSeF</strong>
+                                <p>
+                                    Połącz się z Krajowym Systemem e-Faktur, aby wyświetlić odebrane faktury.
+                                    Użyj przycisku „Połącz z KSeF" w panelu bocznym lub przejdź do{' '}
+                                    <button onClick={() => navigate('/settings')} className="link-button">
+                                        Ustawień
+                                    </button>.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {fraudSummary.total > 0 && (
                         <div className="alert-summary">
                             <span className="alert-summary-icon">🚨</span>
@@ -140,7 +174,11 @@ export default function ReceivedInvoices() {
                                         Zaznaczono: {selectedCount}
                                     </span>
                                 )}
-                                <PrimaryButton onClick={() => refetch()} disabled={isLoading || isFetching} icon="⟳">
+                                <PrimaryButton
+                                    onClick={() => refetch()}
+                                    disabled={!isKsefConnected || isLoading || isFetching}
+                                    icon="⟳"
+                                >
                                     {isLoading || isFetching ? 'Pobieranie...' : 'Odśwież'}
                                 </PrimaryButton>
                             </div>
@@ -257,8 +295,14 @@ export default function ReceivedInvoices() {
                                         <tr>
                                             <td colSpan={9}>
                                                 <div className="empty-state">
-                                                    <span className="empty-state-icon">📭</span>
-                                                    <span className="empty-state-text">Brak faktur spełniających kryteria</span>
+                                                    <span className="empty-state-icon">
+                                                        {!isKsefConnected ? '🔌' : '📭'}
+                                                    </span>
+                                                    <span className="empty-state-text">
+                                                        {!isKsefConnected
+                                                            ? 'Połącz się z KSeF, aby wyświetlić faktury'
+                                                            : 'Brak faktur spełniających kryteria'}
+                                                    </span>
                                                 </div>
                                             </td>
                                         </tr>

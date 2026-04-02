@@ -1,5 +1,6 @@
 // src/views/reports/Reports.tsx
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Reports.css';
 import '../dashboard/Dashboard.css';
 import SideNav from '../../components/layout/SideNav';
@@ -9,8 +10,11 @@ import { formatPLN } from '../../helpers/money';
 import { getAllReports, syncFromKsefData, clearAllReports, type ReportInvoice } from '../../services/reportsData';
 import { listIssued, listReceived } from '../../services/ksefApi';
 import { applyFilters, sumKpis, perVatRate, agingIssued, topClients, type ReportFilters } from '../../helpers/reports';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Reports() {
+    const { isKsefConnected, needsCompanySetup } = useAuth();
+    const navigate = useNavigate();
     const [all, setAll] = useState<ReportInvoice[]>([]);
     const [filters, setFilters] = useState<ReportFilters>({ type: 'all' });
     const [isLoading, setIsLoading] = useState(false);
@@ -28,6 +32,11 @@ export default function Reports() {
     const tops = useMemo(() => topClients(filtered), [filtered]);
 
     async function syncFromKsef() {
+        if (!isKsefConnected) {
+            setError('Połącz się z KSeF, aby zsynchronizować dane. Użyj przycisku „Połącz z KSeF" w panelu bocznym.');
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
 
@@ -40,7 +49,7 @@ export default function Reports() {
             const reports = syncFromKsefData(issued, received);
             setAll(reports);
         } catch {
-            setError('Nie udało się pobrać danych z KSeF. Sprawdź czy jesteś zalogowany.');
+            setError('Nie udało się pobrać danych z KSeF. Sprawdź czy połączenie z KSeF jest aktywne.');
         } finally {
             setIsLoading(false);
         }
@@ -85,11 +94,44 @@ export default function Reports() {
                         <p className="subtitle">Podsumowania i analityka faktur z KSeF</p>
                     </header>
 
+                    {needsCompanySetup && (
+                        <div className="alert-box warning">
+                            <span className="alert-icon">⚙️</span>
+                            <div className="alert-content">
+                                <strong>Firma nie jest skonfigurowana</strong>
+                                <p>
+                                    Aby synchronizować dane z KSeF, skonfiguruj dane firmy (NIP + token autoryzacyjny).
+                                    Użyj przycisku „Skonfiguruj firmę" w panelu bocznym.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {!needsCompanySetup && !isKsefConnected && (
+                        <div className="alert-box warning">
+                            <span className="alert-icon">🔌</span>
+                            <div className="alert-content">
+                                <strong>Brak połączenia z KSeF</strong>
+                                <p>
+                                    Połącz się z Krajowym Systemem e-Faktur, aby zsynchronizować raporty.
+                                    Użyj przycisku „Połącz z KSeF" w panelu bocznym lub przejdź do{' '}
+                                    <button onClick={() => navigate('/settings')} className="link-button">
+                                        Ustawień
+                                    </button>.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     <section className="ops-section">
                         <div className="ops-header">
                             <h2>Filtry i akcje</h2>
                             <div className="ops-actions">
-                                <PrimaryButton onClick={syncFromKsef} icon="⟳" disabled={isLoading}>
+                                <PrimaryButton
+                                    onClick={syncFromKsef}
+                                    icon="⟳"
+                                    disabled={!isKsefConnected || isLoading}
+                                >
                                     {isLoading ? 'Synchronizacja...' : 'Synchronizuj z KSeF'}
                                 </PrimaryButton>
                                 <PrimaryButton onClick={exportCsv} icon="📄" disabled={filtered.length === 0}>
@@ -108,7 +150,9 @@ export default function Reports() {
 
                         {all.length === 0 && !isLoading && (
                             <div className="info-banner">
-                                ℹ️ Brak danych. Kliknij "Synchronizuj z KSeF" aby pobrać faktury.
+                                {isKsefConnected
+                                    ? 'ℹ️ Brak danych. Kliknij "Synchronizuj z KSeF" aby pobrać faktury.'
+                                    : 'ℹ️ Połącz się z KSeF, aby móc synchronizować dane raportów.'}
                             </div>
                         )}
 
