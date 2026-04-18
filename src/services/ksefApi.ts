@@ -71,10 +71,12 @@ export interface SessionStatus {
     };
 }
 
+export type KsefDateType = 'Issue' | 'Invoicing' | 'PermanentStorage';
+
 export interface InvoiceQueryRequest {
     subjectType: 'Subject1' | 'Subject2';
     dateRange: {
-        dateType: 'PermanentStorage';
+        dateType: KsefDateType;
         from: string;
         to: string;
     };
@@ -93,7 +95,7 @@ export interface InvoiceMetadata {
     grossAmount: number | null;
     vatAmount: number | null;
     currency: string | null;
-    invoicingMode: string | null;
+    invoicingMode: 'Online' | 'Offline' | null;
     invoiceType: string | null;
     formCode: { systemCode: string; schemaVersion: string; value: string } | null;
     isSelfInvoicing: boolean;
@@ -109,6 +111,8 @@ export interface InvoiceQueryResponse {
         isTruncated: boolean;
         permanentStorageHwmDate: string | null;
         invoices: InvoiceMetadata[];
+        totalCount: number;
+        pagesProcessed: number;
     };
 }
 
@@ -277,20 +281,32 @@ function mapToLegacyInvoice(invoice: InvoiceMetadata, type: 'issued' | 'received
     };
 }
 
-async function fetchAllInvoices(subjectType: 'Subject1' | 'Subject2'): Promise<Invoice[]> {
+function buildWindows(monthsBack: number): { from: Date; to: Date }[] {
     const now = new Date();
-    const seen = new Set<string>();
-    const all: Invoice[] = [];
-    const type = subjectType === 'Subject1' ? 'issued' : 'received';
-
     const windows: { from: Date; to: Date }[] = [];
-    for (let i = 0; i < 4; i++) {
+    const windowMonths = 3;
+    const windowCount = Math.ceil(monthsBack / windowMonths);
+
+    for (let i = 0; i < windowCount; i++) {
         const to = new Date(now);
-        to.setMonth(to.getMonth() - i * 3);
+        to.setMonth(to.getMonth() - i * windowMonths);
+
         const from = new Date(to);
-        from.setMonth(from.getMonth() - 3);
+        from.setMonth(from.getMonth() - windowMonths);
+
         windows.push({ from, to });
     }
+
+    return windows;
+}
+
+async function fetchAllInvoices(subjectType: 'Subject1' | 'Subject2'): Promise<Invoice[]> {
+    const type = subjectType === 'Subject1' ? 'issued' : 'received';
+    const windows = buildWindows(12);
+    const seen = new Set<string>();
+    const all: Invoice[] = [];
+
+    console.log(`[${type}] Pobieranie z ${windows.length} okien czasowych (PermanentStorage)`);
 
     const results = await Promise.allSettled(
         windows.map(w =>
@@ -305,17 +321,35 @@ async function fetchAllInvoices(subjectType: 'Subject1' | 'Subject2'): Promise<I
         )
     );
 
-    for (const result of results) {
-        if (result.status === 'fulfilled' && result.value.success && result.value.data) {
-            for (const inv of result.value.data.invoices) {
-                if (!seen.has(inv.ksefNumber)) {
-                    seen.add(inv.ksefNumber);
-                    all.push(mapToLegacyInvoice(inv, type));
-                }
+    for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        const w = windows[i];
+
+        if (result.status === 'rejected') {
+            console.error(`[${type}] Okno ${i + 1} błąd:`, result.reason);
+            continue;
+        }
+
+        if (!result.value.success || !result.value.data) {
+            console.error(`[${type}] Okno ${i + 1} (${w.from.toISOString().slice(0, 10)} → ${w.to.toISOString().slice(0, 10)}) błąd:`, result.value.error);
+            continue;
+        }
+
+        const windowInvoices = result.value.data.invoices;
+        let added = 0;
+
+        for (const inv of windowInvoices) {
+            if (!seen.has(inv.ksefNumber)) {
+                seen.add(inv.ksefNumber);
+                all.push(mapToLegacyInvoice(inv, type));
+                added++;
             }
         }
+
+        console.log(`[${type}] Okno ${i + 1}: ${added} faktur (${w.from.toISOString().slice(0, 10)} → ${w.to.toISOString().slice(0, 10)})`);
     }
 
+    console.log(`[${type}] Łącznie: ${all.length} unikalnych faktur`);
     return all;
 }
 
@@ -342,7 +376,7 @@ export interface ContractorQueryParams {
     q?: string;
 }
 
-export async function listContractors(_params?: ContractorQueryParams): Promise<Contractor[]> {
+export async function listContractors(): Promise<Contractor[]> {
     return [];
 }
 
