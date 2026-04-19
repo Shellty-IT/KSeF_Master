@@ -1,6 +1,5 @@
 /* src/views/settings/Settings.css */
 
-/* ===== Karty w ustawieniach ===== */
 .card {
     background: var(--panel, #151a22);
     border: 1px solid var(--border, #1f2733);
@@ -18,7 +17,6 @@
     border-bottom: 1px solid var(--border, #1f2733);
 }
 
-/* ===== Labele i inputy ===== */
 .card label {
     display: flex;
     flex-direction: column;
@@ -52,7 +50,6 @@
     cursor: not-allowed;
 }
 
-/* ===== Two column layout ===== */
 .two-col {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -64,7 +61,6 @@
     margin-bottom: 0;
 }
 
-/* ===== Checkbox ===== */
 .checkbox {
     display: inline-flex !important;
     flex-direction: row !important;
@@ -81,14 +77,12 @@
     accent-color: var(--accent, #22d3ee);
 }
 
-/* ===== Hint text ===== */
 .hint {
     color: var(--muted, #a4a9b6);
     font-size: 12px;
     opacity: 0.8;
 }
 
-/* ===== File button ===== */
 .file-btn {
     position: relative;
     overflow: hidden;
@@ -102,7 +96,6 @@
     cursor: pointer;
 }
 
-/* ===== Danger zone ===== */
 .danger-zone {
     border-color: rgba(239, 68, 68, 0.3);
 }
@@ -133,7 +126,6 @@
     background: #991b1b;
 }
 
-/* ===== Info banner ===== */
 .info-banner {
     padding: 12px 16px;
     margin-bottom: 16px;
@@ -144,7 +136,6 @@
     font-size: 14px;
 }
 
-/* ===== Error message ===== */
 .error-message {
     background: rgba(239, 68, 68, 0.1);
     color: #fca5a5;
@@ -162,38 +153,6 @@
 .error-message ul {
     margin: 0;
     padding-left: 20px;
-}
-
-/* ===== Responsywność ===== */
-@media (max-width: 860px) {
-    .two-col {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 768px) {
-    .card {
-        padding: 16px;
-    }
-
-    .danger-actions {
-        flex-direction: column;
-    }
-
-    .danger-actions button,
-    .danger-actions .file-btn {
-        width: 100%;
-        text-align: center;
-    }
-}
-
-@media print {
-    .ops-actions,
-    .file-btn,
-    .btn-danger,
-    .danger-zone {
-        display: none !important;
-    }
 }
 
 .settings-divider {
@@ -233,4 +192,281 @@
 .inline-settings {
     margin-left: 28px;
     margin-top: 12px;
+}
+
+.auth-method-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.auth-method-option {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 16px;
+    background: #0f141b;
+    border: 2px solid var(--border, #1f2733);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.auth-method-option:hover {
+    border-color: rgba(34, 211, 238, 0.4);
+    background: #121722;
+}
+
+.auth-method-option input[type="radio"] {
+    margin-top: 4px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--accent, #22d3ee);
+}
+
+.auth-method-option input[type="radio"]:checked ~ .auth-method-content {
+    opacity: 1;
+}
+
+.auth-method-option input[type="radio"]:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.auth-method-option:has(input[type="radio"]:checked) {
+    border-color: var(--accent, #22d3ee);
+    background: rgba(34, 211, 238, 0.05);
+}
+
+.auth-method-option:has(input[type="radio"]:disabled) {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.auth-method-content {
+    display: flex;
+    gap: 12px;
+    flex: 1;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.auth-method-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.auth-method-text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.auth-method-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text, #e6e9ef);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.auth-method-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.auth-method-description {
+    font-size: 13px;
+    color: var(--muted, #a4a9b6);
+    line-height: 1.5;
+}
+
+.auth-method-details {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border, #1f2733);
+}
+
+.certificate-upload-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.certificate-status {
+    background: rgba(34, 197, 94, 0.05);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.certificate-status-header {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.certificate-status-icon {
+    font-size: 40px;
+    line-height: 1;
+}
+
+.certificate-status-text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.certificate-status-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #86efac;
+}
+
+.certificate-status-subtitle {
+    font-size: 13px;
+    color: #a7f3d0;
+}
+
+.certificate-info-box {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.certificate-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+}
+
+.certificate-info-label {
+    color: #a7f3d0;
+    font-weight: 500;
+}
+
+.certificate-info-value {
+    color: #d1fae5;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.certificate-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.certificate-upload-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.certificate-file-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.certificate-file-label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    background: #0f141b;
+    border: 2px dashed var(--border, #1f2733);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.certificate-file-label:hover {
+    border-color: rgba(34, 211, 238, 0.4);
+    background: #121722;
+}
+
+.certificate-file-label-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text, #e6e9ef);
+}
+
+.certificate-file-input {
+    display: none;
+}
+
+.certificate-file-name {
+    font-size: 13px;
+    color: var(--accent, #22d3ee);
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+@media (max-width: 860px) {
+    .two-col {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-method-selector {
+        gap: 10px;
+    }
+
+    .auth-method-option {
+        padding: 14px;
+    }
+
+    .auth-method-icon {
+        font-size: 28px;
+    }
+}
+
+@media (max-width: 768px) {
+    .card {
+        padding: 16px;
+    }
+
+    .danger-actions {
+        flex-direction: column;
+    }
+
+    .danger-actions button,
+    .danger-actions .file-btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .certificate-actions {
+        flex-direction: column;
+    }
+
+    .certificate-actions button {
+        width: 100%;
+    }
+}
+
+@media print {
+    .ops-actions,
+    .file-btn,
+    .btn-danger,
+    .danger-zone,
+    .auth-method-selector,
+    .certificate-upload-container {
+        display: none !important;
+    }
 }
