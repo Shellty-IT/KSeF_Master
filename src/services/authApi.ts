@@ -38,12 +38,24 @@ export interface UpdateKsefTokenRequest {
     ksefToken: string;
 }
 
+export interface UploadCertificateRequest {
+    certificateBase64: string;
+    privateKeyBase64: string;
+    password?: string;
+}
+
+export interface SwitchAuthMethodRequest {
+    authMethod: 'token' | 'certificate';
+}
+
 export interface CompanyInfo {
     id: number;
     companyName: string;
     nip: string;
     isActive: boolean;
     hasKsefToken: boolean;
+    authMethod: 'token' | 'certificate';
+    hasCertificate: boolean;
 }
 
 export interface UserInfo {
@@ -51,6 +63,16 @@ export interface UserInfo {
     email: string;
     name: string;
     company: CompanyInfo | null;
+}
+
+export interface CertificateInfo {
+    hasCertificate: boolean;
+    hasPrivateKey: boolean;
+    isPasswordProtected: boolean;
+    uploadedAt?: string;
+    subjectName?: string;
+    notBefore?: string;
+    notAfter?: string;
 }
 
 export interface AuthResponse {
@@ -83,10 +105,17 @@ export interface KsefConnectResponse {
     tokenExpired?: boolean;
     data?: {
         nip: string;
+        authMethod: string;
         referenceNumber: string;
         accessTokenValidUntil: string;
         refreshTokenValidUntil: string;
     };
+}
+
+export interface CertificateInfoResponse {
+    success: boolean;
+    error?: string;
+    data?: CertificateInfo;
 }
 
 export async function register(request: RegisterRequest): Promise<AuthResponse> {
@@ -145,6 +174,50 @@ export async function updateKsefToken(request: UpdateKsefTokenRequest): Promise<
     } catch (error) {
         if (error instanceof AxiosError && error.response)
             return error.response.data as CompanyTokenResponse;
+        return { success: false, error: 'Błąd połączenia z serwerem' };
+    }
+}
+
+export async function uploadCertificate(request: UploadCertificateRequest): Promise<CompanyTokenResponse> {
+    try {
+        const response = await authClient.post<CompanyTokenResponse>('/company/certificate', request);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response)
+            return error.response.data as CompanyTokenResponse;
+        return { success: false, error: 'Błąd połączenia z serwerem' };
+    }
+}
+
+export async function switchAuthMethod(request: SwitchAuthMethodRequest): Promise<CompanyTokenResponse> {
+    try {
+        const response = await authClient.put<CompanyTokenResponse>('/company/auth-method', request);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response)
+            return error.response.data as CompanyTokenResponse;
+        return { success: false, error: 'Błąd połączenia z serwerem' };
+    }
+}
+
+export async function deleteCertificate(): Promise<CompanyTokenResponse> {
+    try {
+        const response = await authClient.delete<CompanyTokenResponse>('/company/certificate');
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response)
+            return error.response.data as CompanyTokenResponse;
+        return { success: false, error: 'Błąd połączenia z serwerem' };
+    }
+}
+
+export async function getCertificateInfo(): Promise<CertificateInfoResponse> {
+    try {
+        const response = await authClient.get<CertificateInfoResponse>('/company/certificate/info');
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response)
+            return error.response.data as CertificateInfoResponse;
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }

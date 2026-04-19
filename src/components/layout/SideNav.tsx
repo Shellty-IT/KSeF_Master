@@ -1,7 +1,7 @@
 // src/components/layout/SideNav.tsx
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import KsefSetupModal from '../modal/KsefSetupModal';
 import './SideNav.css';
 
@@ -11,6 +11,8 @@ export default function SideNav() {
         isKsefConnected,
         needsCompanySetup,
         ksefTokenExpired,
+        authMethod,
+        hasCertificate,
         user,
         logout,
         connectKsef,
@@ -52,6 +54,13 @@ export default function SideNav() {
     const handleSetupSuccess = () => {
         setShowSetupModal(false);
         setShowTokenModal(false);
+    };
+
+    const getAuthMethodBadge = () => {
+        if (authMethod === 'certificate') {
+            return hasCertificate ? '🔐 Certyfikat' : '🔐 Certyfikat (brak)';
+        }
+        return '🔑 Token';
     };
 
     return (
@@ -98,6 +107,11 @@ export default function SideNav() {
                             <div className={`ksef-status-badge ${isKsefConnected ? 'connected' : 'disconnected'}`}>
                                 {isKsefConnected ? '🟢 KSeF połączony' : '🔴 KSeF niepołączony'}
                             </div>
+                            {!needsCompanySetup && (
+                                <div className="ksef-auth-method-badge">
+                                    {getAuthMethodBadge()}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -122,7 +136,7 @@ export default function SideNav() {
                             {connectError && (
                                 <div className="ksef-connect-error">{connectError}</div>
                             )}
-                            {ksefTokenExpired && (
+                            {ksefTokenExpired && authMethod === 'token' && (
                                 <button
                                     className="ksef-token-update-link"
                                     onClick={() => setShowTokenModal(true)}

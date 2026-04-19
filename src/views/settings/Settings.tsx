@@ -7,7 +7,8 @@ import TopBar from '../../components/layout/TopBar';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
 import BankAccountInput from '../../components/form/BankAccountInput';
 import KsefSetupModal from '../../components/modal/KsefSetupModal';
-import { useAuth } from '../../context/AuthContext';
+import CertificateUpload from '../../components/settings/CertificateUpload';
+import { useAuth } from '../../hooks/useAuth';
 import {
     getSettings,
     saveSettings,
@@ -30,7 +31,11 @@ export default function Settings() {
         isKsefConnected,
         ksefTokenExpired,
         needsCompanySetup,
+        authMethod,
+        hasCertificate,
         connectKsef,
+        switchAuthMethod,
+        refreshUser,
     } = useAuth();
 
     const [settings, setSettings] = useState<AppSettings>(getSettings());
@@ -42,6 +47,7 @@ export default function Settings() {
     const [showSetupModal, setShowSetupModal] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectError, setConnectError] = useState<string | null>(null);
+    const [isSwitchingMethod, setIsSwitchingMethod] = useState(false);
 
     useEffect(() => {
         setSettings(getSettings());
@@ -162,10 +168,33 @@ export default function Settings() {
         }
     }
 
+    async function handleSwitchAuthMethod(method: 'token' | 'certificate') {
+        if (method === authMethod) return;
+
+        setIsSwitchingMethod(true);
+        const result = await switchAuthMethod(method);
+        setIsSwitchingMethod(false);
+
+        if (!result.success) {
+            alert(result.error || 'Błąd zmiany metody uwierzytelniania');
+            return;
+        }
+
+        await refreshUser();
+        setInfo(`Metoda zmieniona na: ${method === 'token' ? 'Token autoryzacyjny' : 'Certyfikat'}`);
+        setTimeout(() => setInfo(null), 2000);
+    }
+
     function handleTokenSuccess() {
         setShowTokenModal(false);
         setShowSetupModal(false);
         setInfo('Token KSeF zaktualizowany. Połącz się ponownie.');
+        setTimeout(() => setInfo(null), 2000);
+    }
+
+    async function handleCertificateSuccess() {
+        await refreshUser();
+        setInfo('Certyfikat zaktualizowany.');
         setTimeout(() => setInfo(null), 2000);
     }
 
@@ -205,7 +234,7 @@ export default function Settings() {
                             <h3>🔗 Połączenie z KSeF</h3>
 
                             {user?.company ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
                                         <div>
                                             <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Firma</span>
@@ -235,7 +264,7 @@ export default function Settings() {
                                         </div>
                                     </div>
 
-                                    {(ksefTokenExpired || !user.company.hasKsefToken) && (
+                                    {(ksefTokenExpired || !user.company.hasKsefToken) && authMethod === 'token' && (
                                         <div style={{
                                             background: 'rgba(239, 68, 68, 0.1)',
                                             border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -279,12 +308,14 @@ export default function Settings() {
                                                 {isConnecting ? '⏳ Łączenie...' : '🔗 Połącz z KSeF'}
                                             </button>
                                         )}
-                                        <button
-                                            className="btn-light"
-                                            onClick={() => setShowTokenModal(true)}
-                                        >
-                                            🔑 Zmień token KSeF
-                                        </button>
+                                        {authMethod === 'token' && (
+                                            <button
+                                                className="btn-light"
+                                                onClick={() => setShowTokenModal(true)}
+                                            >
+                                                🔑 Zmień token KSeF
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ) : needsCompanySetup ? (
@@ -308,6 +339,97 @@ export default function Settings() {
                                 </div>
                             ) : null}
                         </div>
+
+                        {user?.company && !needsCompanySetup && (
+                            <div className="card">
+                                <h3>🔐 Metoda uwierzytelniania KSeF</h3>
+                                <p className="hint" style={{ marginBottom: '16px' }}>
+                                    Wybierz sposób łączenia się z systemem KSeF
+                                </p>
+
+                                <div className="auth-method-selector">
+                                    <label className="auth-method-option">
+                                        <input
+                                            type="radio"
+                                            name="authMethod"
+                                            value="token"
+                                            checked={authMethod === 'token'}
+                                            onChange={() => handleSwitchAuthMethod('token')}
+                                            disabled={isSwitchingMethod}
+                                        />
+                                        <div className="auth-method-content">
+                                            <div className="auth-method-icon">🔑</div>
+                                            <div className="auth-method-text">
+                                                <div className="auth-method-title">Token autoryzacyjny</div>
+                                                <div className="auth-method-description">
+                                                    Standardowe uwierzytelnianie tokenem generowanym w systemie KSeF
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </label>
+
+                                    <label className="auth-method-option">
+                                        <input
+                                            type="radio"
+                                            name="authMethod"
+                                            value="certificate"
+                                            checked={authMethod === 'certificate'}
+                                            onChange={() => handleSwitchAuthMethod('certificate')}
+                                            disabled={isSwitchingMethod || !hasCertificate}
+                                        />
+                                        <div className="auth-method-content">
+                                            <div className="auth-method-icon">🔐</div>
+                                            <div className="auth-method-text">
+                                                <div className="auth-method-title">
+                                                    Certyfikat KSeF
+                                                    {!hasCertificate && (
+                                                        <span className="auth-method-badge">Wymaga przesłania</span>
+                                                    )}
+                                                </div>
+                                                <div className="auth-method-description">
+                                                    Uwierzytelnianie za pomocą certyfikatu wygenerowanego w systemie KSeF (XAdES)
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div className="auth-method-details" style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                        <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+                                            📤 Zarządzanie certyfikatem
+                                        </h4>
+                                        {!hasCertificate && (
+                                            <span style={{
+                                                fontSize: '11px',
+                                                fontWeight: 600,
+                                                padding: '3px 8px',
+                                                background: 'rgba(245, 158, 11, 0.15)',
+                                                color: '#fbbf24',
+                                                borderRadius: '4px',
+                                                textTransform: 'uppercase'
+                                            }}>
+                        Wymagane
+                    </span>
+                                        )}
+                                    </div>
+                                    <CertificateUpload onSuccess={handleCertificateSuccess} />
+                                    {!hasCertificate && (
+                                        <p className="hint" style={{
+                                            marginTop: '12px',
+                                            fontSize: '13px',
+                                            color: '#f59e0b',
+                                            padding: '10px 12px',
+                                            background: 'rgba(245, 158, 11, 0.05)',
+                                            borderRadius: '6px',
+                                            border: '1px solid rgba(245, 158, 11, 0.2)'
+                                        }}>
+                                            💡 Prześlij certyfikat i klucz prywatny wygenerowane w systemie KSeF, aby móc korzystać z uwierzytelniania certyfikatem.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="card">
                             <h3>Profil firmy (Sprzedawca)</h3>

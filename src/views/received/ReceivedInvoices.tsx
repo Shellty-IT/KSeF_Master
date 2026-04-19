@@ -10,7 +10,7 @@ import FraudBadge from '../../components/alerts/FraudBadge';
 import { listReceived, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
 import { useInvoiceFilters } from '../../hooks/useInvoiceFilters';
 import { useFraudDetection } from '../../hooks/useFraudDetection';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 

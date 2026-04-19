@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { getInvoices, type InvoiceMetadata } from '../../services/ksefApi';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 

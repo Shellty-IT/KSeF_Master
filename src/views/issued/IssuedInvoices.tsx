@@ -8,7 +8,7 @@ import PrimaryButton from '../../components/buttons/PrimaryButton';
 import InvoiceFilters from '../../components/filters/InvoiceFilters';
 import { listIssued, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
 import { useInvoiceFilters } from '../../hooks/useInvoiceFilters';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 

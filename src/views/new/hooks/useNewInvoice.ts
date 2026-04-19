@@ -6,7 +6,7 @@ import { isValidNip, sanitizeNip } from '../../../helpers/nip';
 import { calcLine } from '../../../helpers/vat';
 import { sendInvoice, type CreateInvoiceRequest } from '../../../services/ksefApi';
 import { approveDraft } from '../../../services/externalDraftsApi';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../hooks/useAuth';
 import type { InvoiceDraft, InvoiceLineDraft, InvoiceTotals } from '../types';
 import type { PartyValue } from '../../../components/form/ContractorSelect';
 import {

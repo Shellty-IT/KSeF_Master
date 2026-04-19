@@ -10,7 +10,7 @@ import { formatPLN } from '../../helpers/money';
 import { getAllReports, syncFromKsefData, clearAllReports, type ReportInvoice } from '../../services/reportsData';
 import { listIssued, listReceived } from '../../services/ksefApi';
 import { applyFilters, sumKpis, perVatRate, agingIssued, topClients, type ReportFilters } from '../../helpers/reports';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function Reports() {
     const { isKsefConnected, needsCompanySetup } = useAuth();
