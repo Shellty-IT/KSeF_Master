@@ -32,6 +32,7 @@ export interface CompanySetupRequest {
     companyName: string;
     nip: string;
     ksefToken: string;
+    ksefEnvironment?: string;
 }
 
 export interface UpdateCompanyProfileRequest {
@@ -41,6 +42,10 @@ export interface UpdateCompanyProfileRequest {
 
 export interface UpdateKsefTokenRequest {
     ksefToken: string;
+}
+
+export interface UpdateKsefEnvironmentRequest {
+    ksefEnvironment: string;
 }
 
 export interface UploadCertificateRequest {
@@ -60,6 +65,7 @@ export interface CompanyInfo {
     isActive: boolean;
     hasKsefToken: boolean;
     authMethod: 'token' | 'certificate';
+    ksefEnvironment: string;
     hasCertificate: boolean;
 }
 
@@ -80,171 +86,219 @@ export interface CertificateInfo {
     notAfter?: string;
 }
 
-export interface AuthResponse {
+interface ApiResponse<T> {
     success: boolean;
     message?: string;
     error?: string;
-    data?: {
-        token: string;
-        user: UserInfo;
-    };
+    data?: T;
 }
 
-export interface MeResponse {
-    success: boolean;
-    error?: string;
-    data?: UserInfo;
-}
-
-export interface CompanyTokenResponse {
-    success: boolean;
-    message?: string;
-    error?: string;
-    data?: UserInfo;
-}
-
-export interface KsefConnectResponse {
-    success: boolean;
-    message?: string;
-    error?: string;
-    tokenExpired?: boolean;
-    data?: {
-        nip: string;
-        authMethod: string;
-        referenceNumber: string;
-        accessTokenValidUntil: string;
-        refreshTokenValidUntil: string;
-    };
-}
-
-export interface CertificateInfoResponse {
-    success: boolean;
-    error?: string;
-    data?: CertificateInfo;
-}
-
-export async function register(request: RegisterRequest): Promise<AuthResponse> {
+export async function register(request: RegisterRequest): Promise<{ success: boolean; error?: string; token?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.post<AuthResponse>('/register', request);
-        return response.data;
+        const response = await authClient.post<ApiResponse<{ token: string; user: UserInfo }>>('/register', request);
+        if (response.data.success && response.data.data) {
+            return {
+                success: true,
+                token: response.data.data.token,
+                user: response.data.data.user
+            };
+        }
+        return { success: false, error: response.data.error || 'Błąd rejestracji' };
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
-            return error.response.data as AuthResponse;
+        if (error instanceof AxiosError && error.response?.data)
+            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }
 
-export async function loginApp(request: LoginAppRequest): Promise<AuthResponse> {
+export async function loginApp(request: LoginAppRequest): Promise<{ success: boolean; error?: string; token?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.post<AuthResponse>('/login', request);
-        return response.data;
+        const response = await authClient.post<ApiResponse<{ token: string; user: UserInfo }>>('/login', request);
+        if (response.data.success && response.data.data) {
+            return {
+                success: true,
+                token: response.data.data.token,
+                user: response.data.data.user
+            };
+        }
+        return { success: false, error: response.data.error || 'Błąd logowania' };
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
-            return error.response.data as AuthResponse;
+        if (error instanceof AxiosError && error.response?.data)
+            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }
 
-export async function getMe(): Promise<MeResponse> {
+export async function getMe(): Promise<{ success: boolean; error?: string; user?: UserInfo; isKsefConnected?: boolean; needsCompanySetup?: boolean }> {
     try {
-        const response = await authClient.get<MeResponse>('/me');
-        return response.data;
+        const response = await authClient.get<ApiResponse<{ user: UserInfo; isKsefConnected: boolean; needsCompanySetup: boolean }>>('/me');
+        if (response.data.success && response.data.data) {
+            return {
+                success: true,
+                user: response.data.data.user,
+                isKsefConnected: response.data.data.isKsefConnected,
+                needsCompanySetup: response.data.data.needsCompanySetup
+            };
+        }
+        return { success: false, error: response.data.error };
     } catch (error) {
         if (error instanceof AxiosError && error.response) {
             if (error.response.status === 401) {
                 localStorage.removeItem('authToken');
                 return { success: false, error: 'Sesja wygasła' };
             }
-            return error.response.data as MeResponse;
+            return { success: false, error: error.response.data?.error || 'Błąd połączenia z serwerem' };
         }
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }
 
-export async function setupCompany(request: CompanySetupRequest): Promise<AuthResponse> {
+export async function setupCompany(request: CompanySetupRequest): Promise<{ success: boolean; error?: string; token?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.post<AuthResponse>('/company', request);
-        return response.data;
+        const response = await authClient.post<ApiResponse<{ token?: string; user: UserInfo }>>('/company', request);
+        if (response.data.success && response.data.data) {
+            return {
+                success: true,
+                token: response.data.data.token,
+                user: response.data.data.user
+            };
+        }
+        return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
-            return error.response.data as AuthResponse;
+        if (error instanceof AxiosError && error.response?.data)
+            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }
 
-export async function updateCompanyProfile(request: UpdateCompanyProfileRequest): Promise<AuthResponse> {
+export async function updateCompanyProfile(request: UpdateCompanyProfileRequest): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.put<AuthResponse>('/company/profile', request);
-        return response.data;
+        const response = await authClient.put<ApiResponse<{ user: UserInfo }>>('/company/profile', request);
+        if (response.data.success && response.data.data) {
+            return { success: true, user: response.data.data.user };
+        }
+        return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
-            return error.response.data as AuthResponse;
+        if (error instanceof AxiosError && error.response?.data)
+            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }
 
-export async function updateKsefToken(request: UpdateKsefTokenRequest): Promise<CompanyTokenResponse> {
+export async function updateKsefToken(request: UpdateKsefTokenRequest): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.put<CompanyTokenResponse>('/company/token', request);
-        return response.data;
+        const response = await authClient.put<ApiResponse<{ user: UserInfo }>>('/company/token', request);
+        if (response.data.success && response.data.data) {
+            return { success: true, user: response.data.data.user };
+        }
+        return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
-            return error.response.data as CompanyTokenResponse;
+        if (error instanceof AxiosError && error.response?.data)
+            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }
 
-export async function uploadCertificate(request: UploadCertificateRequest): Promise<CompanyTokenResponse> {
+export async function updateKsefEnvironment(request: UpdateKsefEnvironmentRequest): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.post<CompanyTokenResponse>('/company/certificate', request);
-        return response.data;
+        const response = await authClient.put<ApiResponse<{ user: UserInfo }>>('/company/environment', request);
+        if (response.data.success && response.data.data) {
+            return { success: true, user: response.data.data.user };
+        }
+        return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
-            return error.response.data as CompanyTokenResponse;
+        if (error instanceof AxiosError && error.response?.data)
+            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }
 
-export async function switchAuthMethod(request: SwitchAuthMethodRequest): Promise<CompanyTokenResponse> {
+export async function uploadCertificate(request: UploadCertificateRequest): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.put<CompanyTokenResponse>('/company/auth-method', request);
-        return response.data;
+        const response = await authClient.post<ApiResponse<{ user: UserInfo }>>('/company/certificate', request);
+        if (response.data.success && response.data.data) {
+            return { success: true, user: response.data.data.user };
+        }
+        return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
-            return error.response.data as CompanyTokenResponse;
+        if (error instanceof AxiosError && error.response?.data)
+            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }
 
-export async function deleteCertificate(): Promise<CompanyTokenResponse> {
+export async function switchAuthMethod(request: SwitchAuthMethodRequest): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.delete<CompanyTokenResponse>('/company/certificate');
-        return response.data;
+        const response = await authClient.put<ApiResponse<{ user: UserInfo }>>('/company/auth-method', request);
+        if (response.data.success && response.data.data) {
+            return { success: true, user: response.data.data.user };
+        }
+        return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
-            return error.response.data as CompanyTokenResponse;
+        if (error instanceof AxiosError && error.response?.data)
+            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }
 
-export async function getCertificateInfo(): Promise<CertificateInfoResponse> {
+export async function deleteCertificate(): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.get<CertificateInfoResponse>('/company/certificate/info');
-        return response.data;
+        const response = await authClient.delete<ApiResponse<{ user: UserInfo }>>('/company/certificate');
+        if (response.data.success && response.data.data) {
+            return { success: true, user: response.data.data.user };
+        }
+        return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
-            return error.response.data as CertificateInfoResponse;
+        if (error instanceof AxiosError && error.response?.data)
+            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }
 
-export async function connectToKsef(): Promise<KsefConnectResponse> {
+export async function getCertificateInfo(): Promise<{ success: boolean; error?: string; data?: CertificateInfo }> {
     try {
-        const response = await authClient.post<KsefConnectResponse>('/ksef/connect');
-        return response.data;
+        const response = await authClient.get<ApiResponse<CertificateInfo>>('/company/certificate/info');
+        return {
+            success: response.data.success,
+            error: response.data.error,
+            data: response.data.data
+        };
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
-            return error.response.data as KsefConnectResponse;
+        if (error instanceof AxiosError && error.response?.data)
+            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
+        return { success: false, error: 'Błąd połączenia z serwerem' };
+    }
+}
+
+export async function connectToKsef(): Promise<{ success: boolean; error?: string; tokenExpired?: boolean; data?: { nip?: string; accessTokenValidUntil?: string; referenceNumber?: string; environment?: string } }> {
+    try {
+        const response = await authClient.post<ApiResponse<{ nip?: string; accessTokenValidUntil?: string; referenceNumber?: string; environment?: string }>>('/ksef/connect');
+        return {
+            success: response.data.success,
+            error: response.data.error,
+            data: response.data.data
+        };
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data)
+            return {
+                success: false,
+                error: error.response.data.error || 'Błąd połączenia z serwerem',
+                tokenExpired: error.response.data.tokenExpired
+            };
+        return { success: false, error: 'Błąd połączenia z serwerem' };
+    }
+}
+
+export async function disconnectFromKsef(): Promise<{ success: boolean; error?: string }> {
+    try {
+        const response = await authClient.post<ApiResponse<null>>('/ksef/disconnect');
+        return {
+            success: response.data.success,
+            error: response.data.error
+        };
+    } catch (error) {
+        if (error instanceof AxiosError && error.response?.data)
+            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
         return { success: false, error: 'Błąd połączenia z serwerem' };
     }
 }

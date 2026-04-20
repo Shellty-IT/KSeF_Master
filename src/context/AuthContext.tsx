@@ -13,15 +13,18 @@ export interface AuthState {
     needsCompanySetup: boolean;
     ksefTokenExpired: boolean;
     authMethod: 'token' | 'certificate';
+    ksefEnvironment: string;
     hasCertificate: boolean;
 }
 
 export interface AuthContextType extends AuthState {
     loginApp: (email: string, password: string) => Promise<boolean>;
     registerApp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
-    setupCompany: (companyName: string, nip: string, ksefToken: string) => Promise<{ success: boolean; error?: string }>;
+    setupCompany: (companyName: string, nip: string, ksefToken: string, ksefEnvironment?: string) => Promise<{ success: boolean; error?: string }>;
     connectKsef: () => Promise<{ success: boolean; error?: string; tokenExpired?: boolean }>;
+    disconnectKsef: () => Promise<{ success: boolean; error?: string }>;
     updateKsefToken: (ksefToken: string) => Promise<{ success: boolean; error?: string }>;
+    updateKsefEnvironment: (environment: string) => Promise<{ success: boolean; error?: string }>;
     uploadCertificate: (certFile: File, keyFile: File, password?: string) => Promise<{ success: boolean; error?: string }>;
     switchAuthMethod: (method: 'token' | 'certificate') => Promise<{ success: boolean; error?: string }>;
     deleteCertificate: () => Promise<{ success: boolean; error?: string }>;
