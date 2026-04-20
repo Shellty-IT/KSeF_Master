@@ -17,6 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         needsCompanySetup: false,
         ksefTokenExpired: false,
         authMethod: 'token',
+        ksefEnvironment: 'Test',
         hasCertificate: false,
     });
 
@@ -28,40 +29,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const meResult = await authApi.getMe();
-        if (!meResult.success || !meResult.data) {
+        if (!meResult.success || !meResult.user) {
             authApi.clearStoredToken();
             setState(prev => ({ ...prev, isLoading: false }));
             return;
         }
 
-        const user = meResult.data;
-        const needsSetup = user.company === null;
+        const user = meResult.user;
+        const needsSetup = meResult.needsCompanySetup ?? (user.company === null);
+        const isConnected = meResult.isKsefConnected ?? false;
 
         setState(prev => ({
             ...prev,
             isLoading: false,
             isAppAuthenticated: true,
+            isKsefConnected: isConnected,
             user,
             needsCompanySetup: needsSetup,
             ksefNip: user.company?.nip ?? null,
             authMethod: user.company?.authMethod ?? 'token',
+            ksefEnvironment: user.company?.ksefEnvironment ?? 'Test',
             hasCertificate: user.company?.hasCertificate ?? false,
         }));
-
-        if (!needsSetup) {
-            try {
-                const statusResult = await ksefApiModule.getStatus();
-                if (statusResult.session.isAuthenticated) {
-                    setState(prev => ({
-                        ...prev,
-                        isKsefConnected: true,
-                        ksefAccessTokenValidUntil: statusResult.session.accessTokenValidUntil,
-                    }));
-                }
-            } catch {
-                // noop
-            }
-        }
     }, []);
 
     useEffect(() => {
@@ -73,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const result = await authApi.loginApp({ email, password });
 
-        if (!result.success || !result.data) {
+        if (!result.success || !result.token || !result.user) {
             setState(prev => ({
                 ...prev,
                 isLoading: false,
@@ -82,8 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return false;
         }
 
-        authApi.setStoredToken(result.data.token);
-        const user = result.data.user;
+        authApi.setStoredToken(result.token);
+        const user = result.user;
         const needsSetup = user.company === null;
 
         setState(prev => ({
@@ -94,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsCompanySetup: needsSetup,
             ksefNip: user.company?.nip ?? null,
             authMethod: user.company?.authMethod ?? 'token',
+            ksefEnvironment: user.company?.ksefEnvironment ?? 'Test',
             hasCertificate: user.company?.hasCertificate ?? false,
             error: null,
         }));
@@ -106,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const result = await authApi.register({ email, password, name });
 
-        if (!result.success || !result.data) {
+        if (!result.success || !result.token || !result.user) {
             setState(prev => ({
                 ...prev,
                 isLoading: false,
@@ -115,8 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return { success: false, error: result.error };
         }
 
-        authApi.setStoredToken(result.data.token);
-        const user = result.data.user;
+        authApi.setStoredToken(result.token);
+        const user = result.user;
 
         setState(prev => ({
             ...prev,
@@ -130,14 +120,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: true };
     };
 
-
-
-    const setupCompany = async (companyName: string, nip: string, ksefToken: string): Promise<{ success: boolean; error?: string }> => {
+    const setupCompany = async (
+        companyName: string,
+        nip: string,
+        ksefToken: string,
+        ksefEnvironment?: string
+    ): Promise<{ success: boolean; error?: string }> => {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-        const result = await authApi.setupCompany({ companyName, nip, ksefToken });
+        const result = await authApi.setupCompany({
+            companyName,
+            nip,
+            ksefToken,
+            ksefEnvironment: ksefEnvironment || 'Test',
+        });
 
-        if (!result.success || !result.data) {
+        if (!result.success || !result.user) {
             setState(prev => ({
                 ...prev,
                 isLoading: false,
@@ -146,11 +144,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return { success: false, error: result.error };
         }
 
-        if (result.data.token) {
-            authApi.setStoredToken(result.data.token);
+        if (result.token) {
+            authApi.setStoredToken(result.token);
         }
 
-        const user = result.data.user;
+        const user = result.user;
 
         setState(prev => ({
             ...prev,
@@ -159,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsCompanySetup: false,
             ksefNip: user.company?.nip ?? null,
             authMethod: user.company?.authMethod ?? 'token',
+            ksefEnvironment: user.company?.ksefEnvironment ?? 'Test',
             hasCertificate: user.company?.hasCertificate ?? false,
             error: null,
         }));
@@ -171,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const result = await authApi.updateCompanyProfile({ companyName, nip });
 
-        if (!result.success || !result.data) {
+        if (!result.success || !result.user) {
             setState(prev => ({
                 ...prev,
                 isLoading: false,
@@ -180,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return { success: false, error: result.error };
         }
 
-        const user = result.data.user;
+        const user = result.user;
 
         setState(prev => ({
             ...prev,
@@ -221,6 +220,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: true };
     };
 
+    const disconnectKsef = async (): Promise<{ success: boolean; error?: string }> => {
+        const result = await authApi.disconnectFromKsef();
+
+        if (!result.success) {
+            return { success: false, error: result.error };
+        }
+
+        setState(prev => ({
+            ...prev,
+            isKsefConnected: false,
+            ksefAccessTokenValidUntil: null,
+        }));
+
+        return { success: true };
+    };
+
     const updateKsefTokenFn = async (ksefToken: string): Promise<{ success: boolean; error?: string }> => {
         const result = await authApi.updateKsefToken({ ksefToken });
 
@@ -228,11 +243,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return { success: false, error: result.error };
         }
 
-        if (result.data) {
+        if (result.user) {
             setState(prev => ({
                 ...prev,
-                user: prev.user ? { ...prev.user, company: result.data!.company } : null,
+                user: result.user!,
                 ksefTokenExpired: false,
+            }));
+        }
+
+        return { success: true };
+    };
+
+    const updateKsefEnvironmentFn = async (environment: string): Promise<{ success: boolean; error?: string }> => {
+        const result = await authApi.updateKsefEnvironment({ ksefEnvironment: environment });
+
+        if (!result.success) {
+            return { success: false, error: result.error };
+        }
+
+        if (result.user) {
+            setState(prev => ({
+                ...prev,
+                user: result.user!,
+                ksefEnvironment: result.user!.company?.ksefEnvironment ?? 'Test',
             }));
         }
 
@@ -245,15 +278,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password?: string
     ): Promise<{ success: boolean; error?: string }> => {
         try {
-            console.log('📤 Uploading certificate:', certFile.name, '| key:', keyFile.name);
-            console.log('   Cert size:', certFile.size, 'bytes | Key size:', keyFile.size, 'bytes');
-
-            // ✅ Walidacja PEM przed konwersją
             const certText = await readFileAsText(certFile);
             const keyText = await readFileAsText(keyFile);
-
-            console.log('📄 Cert PEM first line:', certText.split('\n')[0]);
-            console.log('🔑 Key PEM first line:', keyText.split('\n')[0]);
 
             if (!certText.includes('BEGIN CERTIFICATE')) {
                 return {
@@ -269,22 +295,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 };
             }
 
-            // ✅ Konwersja przez TextEncoder (obsługuje cały ASCII poprawnie)
             const certBase64 = await pemFileToBase64(certFile);
             const keyBase64 = await pemFileToBase64(keyFile);
-
-            console.log('✅ Cert Base64 length:', certBase64.length, '→ bytes:', Math.floor(certBase64.length * 3/4));
-            console.log('✅ Key Base64 length:', keyBase64.length, '→ bytes:', Math.floor(keyBase64.length * 3/4));
-            console.log('🔐 Password provided:', password ? `YES (${password.length} chars)` : 'NO');
-
-            // ✅ Weryfikacja czy Base64 jest prawidłowe
-            try {
-                atob(certBase64.replace(/\s/g, ''));
-                atob(keyBase64.replace(/\s/g, ''));
-                console.log('✅ Base64 validation OK');
-            } catch {
-                return { success: false, error: 'Błąd konwersji pliku do Base64' };
-            }
 
             const result = await authApi.uploadCertificate({
                 certificateBase64: certBase64,
@@ -293,22 +305,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
 
             if (!result.success) {
-                console.error('❌ Upload failed:', result.error);
                 return { success: false, error: result.error };
             }
 
-            if (result.data) {
+            if (result.user) {
                 setState(prev => ({
                     ...prev,
-                    user: prev.user ? { ...prev.user, company: result.data!.company } : null,
-                    hasCertificate: result.data!.company?.hasCertificate ?? false,
+                    user: result.user!,
+                    hasCertificate: result.user!.company?.hasCertificate ?? false,
                 }));
             }
 
-            console.log('✅ Certificate uploaded successfully');
             return { success: true };
         } catch (error) {
-            console.error('❌ Error:', error);
             return {
                 success: false,
                 error: 'Błąd odczytu plików: ' + (error instanceof Error ? error.message : String(error))
@@ -323,11 +332,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return { success: false, error: result.error };
         }
 
-        if (result.data) {
+        if (result.user) {
             setState(prev => ({
                 ...prev,
-                user: prev.user ? { ...prev.user, company: result.data!.company } : null,
-                authMethod: result.data!.company?.authMethod ?? 'token',
+                user: result.user!,
+                authMethod: result.user!.company?.authMethod ?? 'token',
             }));
         }
 
@@ -341,10 +350,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return { success: false, error: result.error };
         }
 
-        if (result.data) {
+        if (result.user) {
             setState(prev => ({
                 ...prev,
-                user: prev.user ? { ...prev.user, company: result.data!.company } : null,
+                user: result.user!,
                 authMethod: 'token',
                 hasCertificate: false,
             }));
@@ -363,14 +372,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const refreshUser = async () => {
         const meResult = await authApi.getMe();
-        if (meResult.success && meResult.data) {
+        if (meResult.success && meResult.user) {
             setState(prev => ({
                 ...prev,
-                user: meResult.data!,
-                needsCompanySetup: meResult.data!.company === null,
-                ksefNip: meResult.data!.company?.nip ?? null,
-                authMethod: meResult.data!.company?.authMethod ?? 'token',
-                hasCertificate: meResult.data!.company?.hasCertificate ?? false,
+                user: meResult.user!,
+                needsCompanySetup: meResult.needsCompanySetup ?? (meResult.user!.company === null),
+                ksefNip: meResult.user!.company?.nip ?? null,
+                authMethod: meResult.user!.company?.authMethod ?? 'token',
+                ksefEnvironment: meResult.user!.company?.ksefEnvironment ?? 'Test',
+                hasCertificate: meResult.user!.company?.hasCertificate ?? false,
             }));
         }
     };
@@ -393,6 +403,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsCompanySetup: false,
             ksefTokenExpired: false,
             authMethod: 'token',
+            ksefEnvironment: 'Test',
             hasCertificate: false,
         });
     };
@@ -406,7 +417,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setupCompany,
         updateCompanyProfile,
         connectKsef,
+        disconnectKsef,
         updateKsefToken: updateKsefTokenFn,
+        updateKsefEnvironment: updateKsefEnvironmentFn,
         uploadCertificate: uploadCertificateFn,
         switchAuthMethod: switchAuthMethodFn,
         deleteCertificate: deleteCertificateFn,
