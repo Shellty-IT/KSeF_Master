@@ -12,14 +12,10 @@ import type { PartyValue } from '../../../components/form/ContractorSelect';
 import {
     DRAFT_KEY,
     SELLER_KEY,
-    emptyParty,
     emptyLine,
 } from '../constants';
 import {
-    today,
     addDays,
-    suggestNumber,
-    loadSellerFromStorage,
     loadDraft,
     loadImportedData,
     saveSentInvoice,

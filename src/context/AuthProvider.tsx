@@ -130,6 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: true };
     };
 
+
+
     const setupCompany = async (companyName: string, nip: string, ksefToken: string): Promise<{ success: boolean; error?: string }> => {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
 
@@ -158,6 +160,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ksefNip: user.company?.nip ?? null,
             authMethod: user.company?.authMethod ?? 'token',
             hasCertificate: user.company?.hasCertificate ?? false,
+            error: null,
+        }));
+
+        return { success: true };
+    };
+
+    const updateCompanyProfile = async (companyName: string, nip: string): Promise<{ success: boolean; error?: string }> => {
+        setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+        const result = await authApi.updateCompanyProfile({ companyName, nip });
+
+        if (!result.success || !result.data) {
+            setState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: result.error || 'Błąd aktualizacji danych firmy',
+            }));
+            return { success: false, error: result.error };
+        }
+
+        const user = result.data.user;
+
+        setState(prev => ({
+            ...prev,
+            isLoading: false,
+            user,
+            ksefNip: user.company?.nip ?? null,
             error: null,
         }));
 
@@ -375,6 +404,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginApp,
         registerApp,
         setupCompany,
+        updateCompanyProfile,
         connectKsef,
         updateKsefToken: updateKsefTokenFn,
         uploadCertificate: uploadCertificateFn,

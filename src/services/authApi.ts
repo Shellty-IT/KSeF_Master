@@ -34,6 +34,11 @@ export interface CompanySetupRequest {
     ksefToken: string;
 }
 
+export interface UpdateCompanyProfileRequest {
+    companyName: string;
+    nip: string;
+}
+
 export interface UpdateKsefTokenRequest {
     ksefToken: string;
 }
@@ -159,6 +164,17 @@ export async function getMe(): Promise<MeResponse> {
 export async function setupCompany(request: CompanySetupRequest): Promise<AuthResponse> {
     try {
         const response = await authClient.post<AuthResponse>('/company', request);
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response)
+            return error.response.data as AuthResponse;
+        return { success: false, error: 'Błąd połączenia z serwerem' };
+    }
+}
+
+export async function updateCompanyProfile(request: UpdateCompanyProfileRequest): Promise<AuthResponse> {
+    try {
+        const response = await authClient.put<AuthResponse>('/company/profile', request);
         return response.data;
     } catch (error) {
         if (error instanceof AxiosError && error.response)
