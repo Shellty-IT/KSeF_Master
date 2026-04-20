@@ -1,5 +1,6 @@
 /* src/views/settings/Settings.css */
 
+/* ─── Karty ─────────────────────────────────────────────── */
 .card {
     background: var(--panel, #151a22);
     border: 1px solid var(--border, #1f2733);
@@ -50,6 +51,59 @@
     cursor: not-allowed;
 }
 
+/* ─── Zakładki nawigacyjne ───────────────────────────────── */
+.settings-tabs-nav {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    background: var(--panel, #151a22);
+    border: 1px solid var(--border, #1f2733);
+    border-radius: 12px;
+    padding: 6px;
+}
+
+.settings-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted, #a4a9b6);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.settings-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text, #e6e9ef);
+}
+
+.settings-tab-btn.active {
+    background: rgba(34, 211, 238, 0.1);
+    color: var(--accent, #22d3ee);
+    font-weight: 600;
+}
+
+.settings-tab-icon {
+    font-size: 15px;
+    line-height: 1;
+}
+
+.settings-tab-label {
+    line-height: 1;
+}
+
+.settings-tab-content {
+    min-height: 300px;
+}
+
+/* ─── Siatka dwukolumnowa ────────────────────────────────── */
 .two-col {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -61,6 +115,7 @@
     margin-bottom: 0;
 }
 
+/* ─── Checkbox ───────────────────────────────────────────── */
 .checkbox {
     display: inline-flex !important;
     flex-direction: row !important;
@@ -77,6 +132,7 @@
     accent-color: var(--accent, #22d3ee);
 }
 
+/* ─── Pomocnicze ─────────────────────────────────────────── */
 .hint {
     color: var(--muted, #a4a9b6);
     font-size: 12px;
@@ -94,65 +150,6 @@
     inset: 0;
     opacity: 0;
     cursor: pointer;
-}
-
-.danger-zone {
-    border-color: rgba(239, 68, 68, 0.3);
-}
-
-.danger-zone h3 {
-    color: #fca5a5;
-}
-
-.danger-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-top: 12px;
-}
-
-.btn-danger {
-    background: #7f1d1d;
-    color: #fecaca;
-    border: 1px solid #991b1b;
-    padding: 10px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-.btn-danger:hover {
-    background: #991b1b;
-}
-
-.info-banner {
-    padding: 12px 16px;
-    margin-bottom: 16px;
-    background: rgba(34, 197, 94, 0.1);
-    border: 1px solid rgba(34, 197, 94, 0.3);
-    border-radius: 8px;
-    color: #86efac;
-    font-size: 14px;
-}
-
-.error-message {
-    background: rgba(239, 68, 68, 0.1);
-    color: #fca5a5;
-    padding: 14px 18px;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: 10px;
-    margin-bottom: 16px;
-}
-
-.error-message strong {
-    display: block;
-    margin-bottom: 8px;
-}
-
-.error-message ul {
-    margin: 0;
-    padding-left: 20px;
 }
 
 .settings-divider {
@@ -194,6 +191,68 @@
     margin-top: 12px;
 }
 
+/* ─── Bannery ────────────────────────────────────────────── */
+.info-banner {
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 8px;
+    color: #86efac;
+    font-size: 14px;
+}
+
+.error-message {
+    background: rgba(239, 68, 68, 0.1);
+    color: #fca5a5;
+    padding: 14px 18px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.error-message strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.error-message ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+/* ─── Strefa ryzyka ──────────────────────────────────────── */
+.danger-zone {
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.danger-zone h3 {
+    color: #fca5a5;
+}
+
+.danger-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.btn-danger {
+    background: #7f1d1d;
+    color: #fecaca;
+    border: 1px solid #991b1b;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+    background: #991b1b;
+}
+
+/* ─── Metoda auth ────────────────────────────────────────── */
 .auth-method-selector {
     display: flex;
     flex-direction: column;
@@ -225,10 +284,6 @@
     height: 20px;
     cursor: pointer;
     accent-color: var(--accent, #22d3ee);
-}
-
-.auth-method-option input[type="radio"]:checked ~ .auth-method-content {
-    opacity: 1;
 }
 
 .auth-method-option input[type="radio"]:disabled {
@@ -290,12 +345,7 @@
     line-height: 1.5;
 }
 
-.auth-method-details {
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border, #1f2733);
-}
-
+/* ─── Certyfikat ─────────────────────────────────────────── */
 .certificate-upload-container {
     display: flex;
     flex-direction: column;
@@ -418,6 +468,18 @@
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
 }
 
+/* ─── Responsywność ──────────────────────────────────────── */
+@media (max-width: 1100px) {
+    .settings-tabs-nav {
+        gap: 2px;
+    }
+
+    .settings-tab-btn {
+        padding: 9px 12px;
+        font-size: 12px;
+    }
+}
+
 @media (max-width: 860px) {
     .two-col {
         grid-template-columns: 1fr;
@@ -441,6 +503,25 @@
         padding: 16px;
     }
 
+    .settings-tabs-nav {
+        gap: 2px;
+        padding: 4px;
+    }
+
+    .settings-tab-btn {
+        padding: 8px 10px;
+        font-size: 12px;
+        gap: 4px;
+    }
+
+    .settings-tab-label {
+        display: none;
+    }
+
+    .settings-tab-icon {
+        font-size: 18px;
+    }
+
     .danger-actions {
         flex-direction: column;
     }
@@ -460,8 +541,14 @@
     }
 }
 
+@media (max-width: 480px) {
+    .settings-tab-btn {
+        padding: 8px;
+    }
+}
+
 @media print {
-    .ops-actions,
+    .settings-tabs-nav,
     .file-btn,
     .btn-danger,
     .danger-zone,

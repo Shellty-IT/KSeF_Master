@@ -26,6 +26,7 @@ export interface AuthContextType extends AuthState {
     switchAuthMethod: (method: 'token' | 'certificate') => Promise<{ success: boolean; error?: string }>;
     deleteCertificate: () => Promise<{ success: boolean; error?: string }>;
     getCertificateInfo: () => Promise<CertificateInfo | null>;
+    updateCompanyProfile: (companyName: string, nip: string) => Promise<{ success: boolean; error?: string }>;
     logout: () => void;
     refreshUser: () => Promise<void>;
     isAuthenticated: boolean;
