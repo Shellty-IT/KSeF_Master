@@ -172,6 +172,48 @@ export interface SendInvoiceResponse {
     };
 }
 
+export interface SyncInvoicesResponse {
+    success: boolean;
+    error?: string;
+    data?: {
+        issued: { newCount: number; totalFetched: number };
+        received: { newCount: number; totalFetched: number };
+        syncedAt: string;
+    };
+}
+
+export interface CachedInvoice {
+    id: number;
+    companyProfileId: number;
+    ksefReferenceNumber: string;
+    nip: string;
+    invoiceType: string;
+    direction: string;
+    invoiceNumber: string | null;
+    sellerNip: string | null;
+    sellerName: string | null;
+    buyerNip: string | null;
+    buyerName: string | null;
+    netAmount: number | null;
+    vatAmount: number | null;
+    grossAmount: number | null;
+    currency: string | null;
+    invoiceDate: string | null;
+    acquisitionTimestamp: string;
+    syncedAt: string;
+    ksefEnvironment: string;
+}
+
+export interface CachedInvoicesResponse {
+    success: boolean;
+    error?: string;
+    data?: {
+        invoices: CachedInvoice[];
+        totalCount: number;
+        fetchedAt: string;
+    };
+}
+
 export async function getStatus(): Promise<SessionStatus> {
     const response = await apiClientWithLongTimeout.get<SessionStatus>('/status');
     return response.data;
@@ -204,6 +246,28 @@ export async function getInvoices(request: InvoiceQueryRequest): Promise<Invoice
     } catch (error) {
         if (error instanceof AxiosError && error.response)
             return error.response.data as InvoiceQueryResponse;
+        throw error;
+    }
+}
+
+export async function getCachedInvoices(): Promise<CachedInvoicesResponse> {
+    try {
+        const response = await apiClient.get<CachedInvoicesResponse>('/invoices/cached');
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response)
+            return error.response.data as CachedInvoicesResponse;
+        throw error;
+    }
+}
+
+export async function syncInvoices(): Promise<SyncInvoicesResponse> {
+    try {
+        const response = await apiClientWithLongTimeout.post<SyncInvoicesResponse>('/invoices/sync');
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response)
+            return error.response.data as SyncInvoicesResponse;
         throw error;
     }
 }
@@ -260,105 +324,40 @@ export interface ListInvoicesParams {
     date?: { from?: string; to?: string };
 }
 
-function mapToLegacyInvoice(invoice: InvoiceMetadata, type: 'issued' | 'received'): Invoice {
+function mapCachedToLegacy(invoice: CachedInvoice): Invoice {
     return {
-        numerKsef: invoice.ksefNumber,
+        numerKsef: invoice.ksefReferenceNumber,
         numerFaktury: invoice.invoiceNumber || '',
-        nazwaKontrahenta: type === 'issued'
-            ? invoice.buyer?.name || ''
-            : invoice.seller?.name || '',
-        nipKontrahenta: type === 'issued'
-            ? invoice.buyer?.identifier?.value || ''
-            : invoice.seller?.nip || '',
+        nazwaKontrahenta: invoice.direction === 'issued'
+            ? invoice.buyerName || ''
+            : invoice.sellerName || '',
+        nipKontrahenta: invoice.direction === 'issued'
+            ? invoice.buyerNip || ''
+            : invoice.sellerNip || '',
         kwotaBrutto: invoice.grossAmount || 0,
-        dataWystawienia: invoice.issueDate || invoice.invoicingDate?.split('T')[0] || '',
+        dataWystawienia: invoice.invoiceDate?.split('T')[0] || '',
         status: 'accepted' as UpoStatus,
-        invoiceHash: invoice.invoiceHash || undefined,
         kwotaNetto: invoice.netAmount || undefined,
         kwotaVat: invoice.vatAmount || undefined,
-        nazwaSprzedawcy: invoice.seller?.name || undefined,
-        nipSprzedawcy: invoice.seller?.nip || undefined,
+        nazwaSprzedawcy: invoice.sellerName || undefined,
+        nipSprzedawcy: invoice.sellerNip || undefined,
     };
 }
 
-function buildWindows(monthsBack: number): { from: Date; to: Date }[] {
-    const now = new Date();
-    const windows: { from: Date; to: Date }[] = [];
-    const windowMonths = 3;
-    const windowCount = Math.ceil(monthsBack / windowMonths);
-
-    for (let i = 0; i < windowCount; i++) {
-        const to = new Date(now);
-        to.setMonth(to.getMonth() - i * windowMonths);
-
-        const from = new Date(to);
-        from.setMonth(from.getMonth() - windowMonths);
-
-        windows.push({ from, to });
-    }
-
-    return windows;
-}
-
-async function fetchAllInvoices(subjectType: 'Subject1' | 'Subject2'): Promise<Invoice[]> {
-    const type = subjectType === 'Subject1' ? 'issued' : 'received';
-    const windows = buildWindows(12);
-    const seen = new Set<string>();
-    const all: Invoice[] = [];
-
-    console.log(`[${type}] Pobieranie z ${windows.length} okien czasowych (PermanentStorage)`);
-
-    const results = await Promise.allSettled(
-        windows.map(w =>
-            getInvoices({
-                subjectType,
-                dateRange: {
-                    dateType: 'PermanentStorage',
-                    from: w.from.toISOString(),
-                    to: w.to.toISOString(),
-                },
-            })
-        )
-    );
-
-    for (let i = 0; i < results.length; i++) {
-        const result = results[i];
-        const w = windows[i];
-
-        if (result.status === 'rejected') {
-            console.error(`[${type}] Okno ${i + 1} błąd:`, result.reason);
-            continue;
-        }
-
-        if (!result.value.success || !result.value.data) {
-            console.error(`[${type}] Okno ${i + 1} (${w.from.toISOString().slice(0, 10)} → ${w.to.toISOString().slice(0, 10)}) błąd:`, result.value.error);
-            continue;
-        }
-
-        const windowInvoices = result.value.data.invoices;
-        let added = 0;
-
-        for (const inv of windowInvoices) {
-            if (!seen.has(inv.ksefNumber)) {
-                seen.add(inv.ksefNumber);
-                all.push(mapToLegacyInvoice(inv, type));
-                added++;
-            }
-        }
-
-        console.log(`[${type}] Okno ${i + 1}: ${added} faktur (${w.from.toISOString().slice(0, 10)} → ${w.to.toISOString().slice(0, 10)})`);
-    }
-
-    console.log(`[${type}] Łącznie: ${all.length} unikalnych faktur`);
-    return all;
-}
-
 export async function listIssued(): Promise<Invoice[]> {
-    return fetchAllInvoices('Subject1');
+    const response = await getCachedInvoices();
+    if (!response.success || !response.data) return [];
+    return response.data.invoices
+        .filter(i => i.direction === 'issued')
+        .map(mapCachedToLegacy);
 }
 
 export async function listReceived(): Promise<Invoice[]> {
-    return fetchAllInvoices('Subject2');
+    const response = await getCachedInvoices();
+    if (!response.success || !response.data) return [];
+    return response.data.invoices
+        .filter(i => i.direction === 'received')
+        .map(mapCachedToLegacy);
 }
 
 export const getReceivedInvoices = listReceived;
