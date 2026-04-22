@@ -1,13 +1,13 @@
 // src/views/received/ReceivedInvoices.tsx
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import './ReceivedInvoices.css';
 import '../dashboard/Dashboard.css';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
 import InvoiceFilters from '../../components/filters/InvoiceFilters';
 import FraudBadge from '../../components/alerts/FraudBadge';
-import { listReceived, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
+import { listReceived, syncInvoices, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
 import { useInvoiceFilters } from '../../hooks/useInvoiceFilters';
 import { useFraudDetection } from '../../hooks/useFraudDetection';
 import { useAuth } from '../../hooks/useAuth';
@@ -29,9 +29,11 @@ function buildPageNumbers(current: number, total: number): (number | 'dots')[] {
 export default function ReceivedInvoices() {
     const { isKsefConnected, needsCompanySetup } = useAuth();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
+    const [syncError, setSyncError] = useState<string | null>(null);
 
     const query = useQuery<Invoice[], Error>({
         queryKey: ['receivedInvoices'],
@@ -42,6 +44,21 @@ export default function ReceivedInvoices() {
 
     const data: Invoice[] = query.data ?? [];
     const { isLoading, isFetching, error, refetch } = query;
+
+    const syncMutation = useMutation({
+        mutationFn: syncInvoices,
+        onSuccess: (result) => {
+            setSyncError(null);
+            if (result.success) {
+                queryClient.invalidateQueries({ queryKey: ['receivedInvoices'] });
+            } else {
+                setSyncError(result.error ?? 'Błąd synchronizacji');
+            }
+        },
+        onError: (err: Error) => {
+            setSyncError(err.message ?? 'Błąd synchronizacji');
+        },
+    });
 
     const {
         filters,
@@ -154,6 +171,16 @@ export default function ReceivedInvoices() {
                         </div>
                     )}
 
+                    {syncError && (
+                        <div className="alert-box warning">
+                            <span className="alert-icon">⚠️</span>
+                            <div className="alert-content">
+                                <strong>Błąd synchronizacji</strong>
+                                <p>{syncError}</p>
+                            </div>
+                        </div>
+                    )}
+
                     {fraudSummary.total > 0 && (
                         <div className="alert-summary">
                             <span className="alert-summary-icon">🚨</span>
@@ -174,6 +201,13 @@ export default function ReceivedInvoices() {
                                         Zaznaczono: {selectedCount}
                                     </span>
                                 )}
+                                <PrimaryButton
+                                    onClick={() => syncMutation.mutate()}
+                                    disabled={!isKsefConnected || syncMutation.isPending}
+                                    icon="☁"
+                                >
+                                    {syncMutation.isPending ? 'Synchronizacja...' : 'Synchronizuj z KSeF'}
+                                </PrimaryButton>
                                 <PrimaryButton
                                     onClick={() => refetch()}
                                     disabled={!isKsefConnected || isLoading || isFetching}

@@ -1,12 +1,12 @@
 // src/views/issued/IssuedInvoices.tsx
 import { useMemo, useState } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import '../received/ReceivedInvoices.css';
 import '../dashboard/Dashboard.css';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
 import InvoiceFilters from '../../components/filters/InvoiceFilters';
-import { listIssued, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
+import { listIssued, syncInvoices, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
 import { useInvoiceFilters } from '../../hooks/useInvoiceFilters';
 import { useAuth } from '../../hooks/useAuth';
 import SideNav from '../../components/layout/SideNav';
@@ -75,9 +75,11 @@ function buildPageNumbers(current: number, total: number): (number | 'dots')[] {
 export default function IssuedInvoices() {
     const { isKsefConnected, needsCompanySetup } = useAuth();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
+    const [syncError, setSyncError] = useState<string | null>(null);
 
     const sentInvoices = useMemo(() => loadSentInvoices(), []);
 
@@ -86,6 +88,21 @@ export default function IssuedInvoices() {
         queryFn: () => listIssued(),
         enabled: isKsefConnected,
         placeholderData: keepPreviousData,
+    });
+
+    const syncMutation = useMutation({
+        mutationFn: syncInvoices,
+        onSuccess: (result) => {
+            setSyncError(null);
+            if (result.success) {
+                queryClient.invalidateQueries({ queryKey: ['issuedInvoices'] });
+            } else {
+                setSyncError(result.error ?? 'Błąd synchronizacji');
+            }
+        },
+        onError: (err: Error) => {
+            setSyncError(err.message ?? 'Błąd synchronizacji');
+        },
     });
 
     const {
@@ -147,7 +164,6 @@ export default function IssuedInvoices() {
                         bankAccount: localData.paymentBankAccount,
                     },
                 };
-
                 await downloadInvoicePdf(request);
             } else if (invoice.invoiceHash) {
                 const request: GeneratePdfRequest = {
@@ -228,6 +244,16 @@ export default function IssuedInvoices() {
                         </div>
                     )}
 
+                    {syncError && (
+                        <div className="alert-box warning">
+                            <span className="alert-icon">⚠️</span>
+                            <div className="alert-content">
+                                <strong>Błąd synchronizacji</strong>
+                                <p>{syncError}</p>
+                            </div>
+                        </div>
+                    )}
+
                     <section className="ops-section">
                         <div className="ops-header">
                             <h2>Wyszukaj i filtruj</h2>
@@ -237,6 +263,13 @@ export default function IssuedInvoices() {
                                         Zaznaczono: {selectedCount}
                                     </span>
                                 )}
+                                <PrimaryButton
+                                    onClick={() => syncMutation.mutate()}
+                                    disabled={!isKsefConnected || syncMutation.isPending}
+                                    icon="☁"
+                                >
+                                    {syncMutation.isPending ? 'Synchronizacja...' : 'Synchronizuj z KSeF'}
+                                </PrimaryButton>
                                 <PrimaryButton
                                     onClick={() => refetch()}
                                     disabled={!isKsefConnected || isLoading || isFetching}
