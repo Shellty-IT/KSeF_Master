@@ -83,7 +83,7 @@ export default function IssuedInvoices() {
 
     const sentInvoices = useMemo(() => loadSentInvoices(), []);
 
-    const { data: invoices = [], isLoading, isFetching, error, refetch } = useQuery<Invoice[]>({
+    const { data: invoices = [], isLoading, isFetching, error } = useQuery<Invoice[]>({
         queryKey: ['issuedInvoices'],
         queryFn: () => listIssued(),
         enabled: isKsefConnected,
@@ -269,13 +269,6 @@ export default function IssuedInvoices() {
                                     icon="☁"
                                 >
                                     {syncMutation.isPending ? 'Synchronizacja...' : 'Synchronizuj z KSeF'}
-                                </PrimaryButton>
-                                <PrimaryButton
-                                    onClick={() => refetch()}
-                                    disabled={!isKsefConnected || isLoading || isFetching}
-                                    icon="⟳"
-                                >
-                                    {isLoading || isFetching ? 'Pobieranie...' : 'Odśwież'}
                                 </PrimaryButton>
                             </div>
                         </div>

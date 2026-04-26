@@ -43,7 +43,7 @@ export default function ReceivedInvoices() {
     });
 
     const data: Invoice[] = query.data ?? [];
-    const { isLoading, isFetching, error, refetch } = query;
+    const { isLoading, isFetching, error } = query;
 
     const syncMutation = useMutation({
         mutationFn: syncInvoices,
@@ -207,13 +207,6 @@ export default function ReceivedInvoices() {
                                     icon="☁"
                                 >
                                     {syncMutation.isPending ? 'Synchronizacja...' : 'Synchronizuj z KSeF'}
-                                </PrimaryButton>
-                                <PrimaryButton
-                                    onClick={() => refetch()}
-                                    disabled={!isKsefConnected || isLoading || isFetching}
-                                    icon="⟳"
-                                >
-                                    {isLoading || isFetching ? 'Pobieranie...' : 'Odśwież'}
                                 </PrimaryButton>
                             </div>
                         </div>

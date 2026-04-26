@@ -139,7 +139,12 @@ export default function LoginView() {
                 </section>
 
                 <footer className="auth-footer">
-                    <span>© 2025 KSeF Master — Środowisko testowe</span>
+<span>
+  © 2026 KSeF Master - by{" "}
+    <a href="https://shellty-it.github.io/" target="_blank" rel="noopener noreferrer" className="underline hover:text-themed">
+    Shellty
+  </a>
+</span>
                 </footer>
             </main>
         </div>

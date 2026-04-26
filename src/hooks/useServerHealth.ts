@@ -1,8 +1,7 @@
 // src/hooks/useServerHealth.ts
 import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-const HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
+const HEALTH_ENDPOINT = '/health';
 const MAX_RETRIES = 15;
 const RETRY_INTERVAL_MS = 2000;
 
@@ -55,14 +54,10 @@ export function useServerHealth(autoCheck: boolean = true): UseServerHealthResul
             setRetryCount(attempt);
             const isOnline = await checkHealth();
 
-            if (isOnline) {
-                return;
-            }
+            if (isOnline) return;
 
             if (attempt >= MAX_RETRIES) {
-                if (isMounted) {
-                    setStatus('offline');
-                }
+                if (isMounted) setStatus('offline');
                 return;
             }
 
@@ -75,9 +70,7 @@ export function useServerHealth(autoCheck: boolean = true): UseServerHealthResul
 
         return () => {
             isMounted = false;
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-            }
+            if (timeoutId) clearTimeout(timeoutId);
         };
     }, [autoCheck, checkHealth]);
 

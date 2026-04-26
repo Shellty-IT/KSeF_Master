@@ -63,13 +63,11 @@ export default function SideNav() {
                     {!isCollapsed && (
                         <span className="brand-name">
                             KSeF Master
-                            <a className="brand-icon-link" aria-label="Ikona KSeF Master">
-                                <img
-                                    src="https://raw.githubusercontent.com/shellty-IT/KSeF-Master/main/public/ico.svg"
-                                    alt="Ikona"
-                                    className="brand-icon"
-                                />
-                            </a>
+                            <img
+                                src="/ico.svg"
+                                alt="Ikona KSeF Master"
+                                className="brand-icon"
+                            />
                         </span>
                     )}
                 </div>
@@ -181,28 +179,14 @@ export default function SideNav() {
 
             {!isCollapsed && (
                 <footer className="side-nav-footer">
-                    <a
-                        href="https://shellty-it.github.io/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="footer-logo-link"
-                        aria-label="Strona wykonana przez Shellty IT"
-                    >
-                        <img
-                            src="https://shellty-it.github.io/favicon-32x32.png"
-                            alt="Shellty"
-                            className="footer-logo"
-                        />
-                    </a>
                     <span className="footer-copyright">
                         © 2025 KSeF Master
-                        <span className="footer-icon-wrapper" aria-hidden="true">
-                            <img
-                                src="https://raw.githubusercontent.com/shellty-IT/KSeF-Master/main/public/ico.svg"
-                                alt=""
-                                className="footer-icon"
-                            />
-                        </span>
+                        <img
+                            src="/ico.svg"
+                            alt=""
+                            className="footer-icon"
+                            aria-hidden="true"
+                        />
                     </span>
                 </footer>
             )}
