@@ -288,6 +288,29 @@ export async function closeSession(): Promise<{ success: boolean; message?: stri
     return response.data;
 }
 
+export interface CloseSessionAndUpoResponse {
+    success: boolean;
+    error?: string;
+    message?: string;
+    data?: {
+        sessionReferenceNumber: string;
+        upoAvailable: boolean;
+        upoReferenceNumber?: string;
+        upoXml?: string;
+    };
+}
+
+export async function closeSessionAndGetUpo(): Promise<CloseSessionAndUpoResponse> {
+    try {
+        const response = await apiClient.post<CloseSessionAndUpoResponse>('/session/close-and-upo');
+        return response.data;
+    } catch (error) {
+        if (error instanceof AxiosError && error.response)
+            return error.response.data as CloseSessionAndUpoResponse;
+        throw error;
+    }
+}
+
 export async function sendInvoice(invoice: CreateInvoiceRequest): Promise<SendInvoiceResponse> {
     try {
         const response = await apiClient.post<SendInvoiceResponse>('/invoice/send', invoice);
@@ -466,3 +489,4 @@ export async function downloadInvoicePdf(request: GeneratePdfRequest): Promise<v
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
+

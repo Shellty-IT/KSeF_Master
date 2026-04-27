@@ -1,4 +1,5 @@
-// src/views/new/NewInvoice.tsx
+// FRONTEND: src/views/new/NewInvoice.tsx
+import { useState } from 'react';
 import './NewInvoice.css';
 import '../dashboard/Dashboard.css';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
@@ -10,8 +11,16 @@ import InvoiceParties from './components/InvoiceParties';
 import InvoiceLinesTable from './components/InvoiceLinesTable';
 import InvoicePayment from './components/InvoicePayment';
 import InvoicePrintView from './components/InvoicePrintView';
+import { useAuth } from '../../hooks/useAuth';
+import { closeSessionAndGetUpo } from '../../services/ksefApi';
 
 export default function NewInvoice() {
+    const { isKsefConnected } = useAuth();
+    const [isClosingSession, setIsClosingSession] = useState(false);
+    const [sessionCloseInfo, setSessionCloseInfo] = useState<string | null>(null);
+    // Przycisk pojawia się dopiero po wysłaniu co najmniej jednej faktury
+    const [invoiceSentInSession, setInvoiceSentInSession] = useState(false);
+
     const {
         draft,
         setDraft,
@@ -30,6 +39,49 @@ export default function NewInvoice() {
         handlePrint,
         handleSendToKsef,
     } = useNewInvoice();
+
+    const handleSendAndTrack = async () => {
+        await handleSendToKsef();
+        // Po wywołaniu handleSendToKsef, hook ustawia `info` na komunikat z ✅ jeśli sukces.
+        // Używamy małego opóźnienia żeby state zdążył się zaktualizować.
+        setTimeout(() => {
+            setInvoiceSentInSession(true);
+        }, 300);
+    };
+
+    const handleCloseSessionAndUpo = async () => {
+        setIsClosingSession(true);
+        setSessionCloseInfo(null);
+        try {
+            const result = await closeSessionAndGetUpo();
+            if (result.success) {
+                if (result.data?.upoAvailable && result.data?.upoXml) {
+                    // Pobieramy UPO jako plik XML
+                    const blob = new Blob([result.data.upoXml], { type: 'text/xml' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `UPO_${result.data.sessionReferenceNumber ?? 'sesja'}.xml`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    setSessionCloseInfo('✅ Sesja zamknięta. UPO zbiorcze pobrane i zapisane.');
+                } else {
+                    setSessionCloseInfo(`✅ ${result.message ?? 'Sesja zamknięta.'}`);
+                }
+                setInvoiceSentInSession(false);
+            } else {
+                setSessionCloseInfo(`⚠️ ${result.error ?? 'Nie udało się zamknąć sesji.'}`);
+            }
+        } catch {
+            setSessionCloseInfo('⚠️ Błąd połączenia podczas zamykania sesji.');
+        } finally {
+            setIsClosingSession(false);
+        }
+    };
+
+    const showCloseButton = isKsefConnected && invoiceSentInSession;
 
     return (
         <div className="dash-root print-hide-nav">
@@ -60,13 +112,23 @@ export default function NewInvoice() {
                                     Podgląd / Drukuj
                                 </PrimaryButton>
                                 <PrimaryButton
-                                    onClick={handleSendToKsef}
+                                    onClick={handleSendAndTrack}
                                     icon="📤"
                                     disabled={isSending || !isAuthenticated}
                                     title={!isAuthenticated ? 'Zaloguj się do KSeF, aby wysłać fakturę' : undefined}
                                 >
                                     {isSending ? 'Wysyłanie...' : 'Wyślij do KSeF'}
                                 </PrimaryButton>
+                                {showCloseButton && (
+                                    <button
+                                        className="btn-close-session"
+                                        onClick={handleCloseSessionAndUpo}
+                                        disabled={isClosingSession}
+                                        title="Zamknij sesję interaktywną i pobierz zbiorcze UPO"
+                                    >
+                                        {isClosingSession ? '⏳ Zamykanie...' : '🔒 Zakończ sesję i pobierz UPO'}
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -79,6 +141,12 @@ export default function NewInvoice() {
                         {isImported && (
                             <div className="info-banner">
                                 📩 Dane zaimportowane ze SmartQuote. Zweryfikuj i uzupełnij brakujące pola przed wysyłką.
+                            </div>
+                        )}
+
+                        {sessionCloseInfo && (
+                            <div className={`info-banner ${sessionCloseInfo.startsWith('✅') ? 'success' : ''}`}>
+                                {sessionCloseInfo}
                             </div>
                         )}
 
