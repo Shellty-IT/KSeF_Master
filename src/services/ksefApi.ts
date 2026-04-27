@@ -202,6 +202,7 @@ export interface CachedInvoice {
     acquisitionTimestamp: string;
     syncedAt: string;
     ksefEnvironment: string;
+    invoiceHash: string | null;
 }
 
 export interface CachedInvoicesResponse {
@@ -364,6 +365,7 @@ function mapCachedToLegacy(invoice: CachedInvoice): Invoice {
         kwotaVat: invoice.vatAmount || undefined,
         nazwaSprzedawcy: invoice.sellerName || undefined,
         nipSprzedawcy: invoice.sellerNip || undefined,
+        invoiceHash: invoice.invoiceHash || undefined,
     };
 }
 

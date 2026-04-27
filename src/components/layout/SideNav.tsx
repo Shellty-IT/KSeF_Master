@@ -180,7 +180,7 @@ export default function SideNav() {
             {!isCollapsed && (
                 <footer className="side-nav-footer">
                     <span className="footer-copyright">
-                        © 2025 KSeF Master
+                        © 2026 KSeF Master
                         <img
                             src="/ico.svg"
                             alt=""
