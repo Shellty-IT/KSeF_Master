@@ -617,3 +617,26 @@ label input[readonly] {
         text-decoration: none;
     }
 }
+
+.btn-close-session {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 8px;
+    color: #fca5a5;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-close-session:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.7);
+}
+
+.btn-close-session:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -72,7 +72,11 @@ export default function LoginView() {
         <div className="auth-root">
             <main className="auth-wrap">
                 <header className="auth-header">
-                    <div className="auth-logo-dot" />
+                    <img
+                        src="/ico.svg"
+                        alt="KSeF Master"
+                        className="auth-logo-img"
+                    />
                     <h1 className="auth-title">KSeF Master</h1>
                     <p className="auth-subtitle">Zaloguj się do swojego konta</p>
                 </header>
@@ -139,12 +143,17 @@ export default function LoginView() {
                 </section>
 
                 <footer className="auth-footer">
-<span>
-  © 2026 KSeF Master - by{" "}
-    <a href="https://shellty-it.github.io/" target="_blank" rel="noopener noreferrer" className="underline hover:text-themed">
-    Shellty
-  </a>
-</span>
+                    <span>
+                        © 2026 KSeF Master - by{' '}
+                        <a
+                            href="https://shellty-it.github.io/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline hover:text-themed"
+                        >
+                            Shellty
+                        </a>
+                    </span>
                 </footer>
             </main>
         </div>
