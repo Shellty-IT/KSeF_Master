@@ -1,11 +1,10 @@
-// src/views/reports/Reports.tsx
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import './Reports.css';
 import '../dashboard/Dashboard.css';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
+import KsefStatusAlerts from '../../components/invoices/KsefStatusAlerts';
 import { formatPLN } from '../../helpers/money';
 import { getAllReports, syncFromKsefData, clearAllReports, type ReportInvoice } from '../../services/reportsData';
 import { listIssued, listReceived } from '../../services/ksefApi';
@@ -14,15 +13,13 @@ import { useAuth } from '../../hooks/useAuth';
 
 export default function Reports() {
     const { isKsefConnected, needsCompanySetup } = useAuth();
-    const navigate = useNavigate();
     const [all, setAll] = useState<ReportInvoice[]>([]);
     const [filters, setFilters] = useState<ReportFilters>({ type: 'all' });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const data = getAllReports();
-        setAll(data);
+        setAll(getAllReports());
     }, []);
 
     const filtered = useMemo(() => applyFilters(all, filters), [all, filters]);
@@ -41,13 +38,8 @@ export default function Reports() {
         setError(null);
 
         try {
-            const [issued, received] = await Promise.all([
-                listIssued(),
-                listReceived()
-            ]);
-
-            const reports = syncFromKsefData(issued, received);
-            setAll(reports);
+            const [issued, received] = await Promise.all([listIssued(), listReceived()]);
+            setAll(syncFromKsefData(issued, received));
         } catch {
             setError('Nie udało się pobrać danych z KSeF. Sprawdź czy połączenie z KSeF jest aktywne.');
         } finally {
@@ -60,9 +52,11 @@ export default function Reports() {
         const rows = filtered.map(r => [
             r.id, r.type, r.number, r.issueDate, r.dueDate || '',
             r.counterparty.name, r.counterparty.nip || '',
-            r.totals.net, r.totals.vat, r.totals.gross, r.vatRate ?? ''
+            r.totals.net, r.totals.vat, r.totals.gross, r.vatRate ?? '',
         ]);
-        const csv = [head, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const csv = [head, ...rows]
+            .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+            .join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -70,10 +64,6 @@ export default function Reports() {
         a.download = 'raport.csv';
         a.click();
         URL.revokeObjectURL(url);
-    }
-
-    function handlePrint() {
-        window.print();
     }
 
     function clearData() {
@@ -94,34 +84,10 @@ export default function Reports() {
                         <p className="subtitle">Podsumowania i analityka faktur z KSeF</p>
                     </header>
 
-                    {needsCompanySetup && (
-                        <div className="alert-box warning">
-                            <span className="alert-icon">⚙️</span>
-                            <div className="alert-content">
-                                <strong>Firma nie jest skonfigurowana</strong>
-                                <p>
-                                    Aby synchronizować dane z KSeF, skonfiguruj dane firmy (NIP + token autoryzacyjny).
-                                    Użyj przycisku „Skonfiguruj firmę" w panelu bocznym.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {!needsCompanySetup && !isKsefConnected && (
-                        <div className="alert-box warning">
-                            <span className="alert-icon">🔌</span>
-                            <div className="alert-content">
-                                <strong>Brak połączenia z KSeF</strong>
-                                <p>
-                                    Połącz się z Krajowym Systemem e-Faktur, aby zsynchronizować raporty.
-                                    Użyj przycisku „Połącz z KSeF" w panelu bocznym lub przejdź do{' '}
-                                    <button onClick={() => navigate('/settings')} className="link-button">
-                                        Ustawień
-                                    </button>.
-                                </p>
-                            </div>
-                        </div>
-                    )}
+                    <KsefStatusAlerts
+                        needsCompanySetup={needsCompanySetup}
+                        isKsefConnected={isKsefConnected}
+                    />
 
                     <section className="ops-section">
                         <div className="ops-header">
@@ -137,16 +103,12 @@ export default function Reports() {
                                 <PrimaryButton onClick={exportCsv} icon="📄" disabled={filtered.length === 0}>
                                     Eksport CSV
                                 </PrimaryButton>
-                                <button className="btn-light" onClick={handlePrint}>Drukuj</button>
+                                <button className="btn-light" onClick={() => window.print()}>Drukuj</button>
                                 <button className="btn-light" onClick={clearData}>Wyczyść</button>
                             </div>
                         </div>
 
-                        {error && (
-                            <div className="error-message">
-                                {error}
-                            </div>
-                        )}
+                        {error && <div className="error-message">{error}</div>}
 
                         {all.length === 0 && !isLoading && (
                             <div className="info-banner">
@@ -340,7 +302,7 @@ export default function Reports() {
                                                                 : 'rgba(59, 130, 246, 0.1)',
                                                             padding: '2px 6px',
                                                             borderRadius: '4px',
-                                                            color: r.type === 'issued' ? '#00e096' : '#60a5fa'
+                                                            color: r.type === 'issued' ? '#00e096' : '#60a5fa',
                                                         }}>
                                                             {r.number}
                                                         </code>

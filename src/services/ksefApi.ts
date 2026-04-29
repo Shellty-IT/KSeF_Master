@@ -1,42 +1,6 @@
-// src/services/ksefApi.ts
-import axios, { AxiosError } from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-
-function createAuthClient(timeout = 120000) {
-    const client = axios.create({
-        baseURL: `${API_BASE_URL}/api/ksef`,
-        headers: { 'Content-Type': 'application/json' },
-        timeout,
-    });
-
-    client.interceptors.request.use((config) => {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    });
-
-    client.interceptors.response.use(
-        (response) => response,
-        (error) => {
-            if (error instanceof AxiosError && error.response?.status === 401) {
-                const currentPath = window.location.hash;
-                if (currentPath !== '#/login' && currentPath !== '#/register' && currentPath !== '#/') {
-                    localStorage.removeItem('authToken');
-                    window.location.hash = '#/login';
-                }
-            }
-            return Promise.reject(error);
-        }
-    );
-
-    return client;
-}
-
-const apiClient = createAuthClient(120000);
-const apiClientWithLongTimeout = createAuthClient(180000);
+import { AxiosError } from 'axios';
+import { ksefHttpClient, ksefHttpClientLong, API_BASE_URL, parseApiError } from './apiClient';
+import { tokenStorage } from './tokenStorage';
 
 export interface LoginRequest {
     nip: string;
@@ -216,24 +180,25 @@ export interface CachedInvoicesResponse {
 }
 
 export async function getStatus(): Promise<SessionStatus> {
-    const response = await apiClientWithLongTimeout.get<SessionStatus>('/status');
+    const response = await ksefHttpClientLong.get<SessionStatus>('/status');
     return response.data;
 }
 
 export async function login(request: LoginRequest): Promise<LoginResponse> {
     try {
-        const response = await apiClient.post<LoginResponse>('/login', request);
+        const response = await ksefHttpClient.post<LoginResponse>('/login', request);
         return response.data;
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
+        if (error instanceof AxiosError && error.response) {
             return error.response.data as LoginResponse;
+        }
         throw error;
     }
 }
 
 export async function logout(): Promise<{ success: boolean; message?: string }> {
     try {
-        const response = await apiClient.post('/logout');
+        const response = await ksefHttpClient.post('/logout');
         return response.data;
     } catch {
         return { success: true, message: 'Wylogowano lokalnie' };
@@ -242,50 +207,54 @@ export async function logout(): Promise<{ success: boolean; message?: string }> 
 
 export async function getInvoices(request: InvoiceQueryRequest): Promise<InvoiceQueryResponse> {
     try {
-        const response = await apiClient.post<InvoiceQueryResponse>('/invoices', request);
+        const response = await ksefHttpClient.post<InvoiceQueryResponse>('/invoices', request);
         return response.data;
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
+        if (error instanceof AxiosError && error.response) {
             return error.response.data as InvoiceQueryResponse;
+        }
         throw error;
     }
 }
 
 export async function getCachedInvoices(): Promise<CachedInvoicesResponse> {
     try {
-        const response = await apiClient.get<CachedInvoicesResponse>('/invoices/cached');
+        const response = await ksefHttpClient.get<CachedInvoicesResponse>('/invoices/cached');
         return response.data;
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
+        if (error instanceof AxiosError && error.response) {
             return error.response.data as CachedInvoicesResponse;
+        }
         throw error;
     }
 }
 
 export async function syncInvoices(): Promise<SyncInvoicesResponse> {
     try {
-        const response = await apiClientWithLongTimeout.post<SyncInvoicesResponse>('/invoices/sync');
+        const response = await ksefHttpClientLong.post<SyncInvoicesResponse>('/invoices/sync');
         return response.data;
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
+        if (error instanceof AxiosError && error.response) {
             return error.response.data as SyncInvoicesResponse;
+        }
         throw error;
     }
 }
 
 export async function openSession(): Promise<OpenSessionResponse> {
     try {
-        const response = await apiClient.post<OpenSessionResponse>('/session/open');
+        const response = await ksefHttpClient.post<OpenSessionResponse>('/session/open');
         return response.data;
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
+        if (error instanceof AxiosError && error.response) {
             return error.response.data as OpenSessionResponse;
+        }
         throw error;
     }
 }
 
 export async function closeSession(): Promise<{ success: boolean; message?: string }> {
-    const response = await apiClient.post('/session/close');
+    const response = await ksefHttpClient.post('/session/close');
     return response.data;
 }
 
@@ -303,22 +272,24 @@ export interface CloseSessionAndUpoResponse {
 
 export async function closeSessionAndGetUpo(): Promise<CloseSessionAndUpoResponse> {
     try {
-        const response = await apiClient.post<CloseSessionAndUpoResponse>('/session/close-and-upo');
+        const response = await ksefHttpClient.post<CloseSessionAndUpoResponse>('/session/close-and-upo');
         return response.data;
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
+        if (error instanceof AxiosError && error.response) {
             return error.response.data as CloseSessionAndUpoResponse;
+        }
         throw error;
     }
 }
 
 export async function sendInvoice(invoice: CreateInvoiceRequest): Promise<SendInvoiceResponse> {
     try {
-        const response = await apiClient.post<SendInvoiceResponse>('/invoice/send', invoice);
+        const response = await ksefHttpClient.post<SendInvoiceResponse>('/invoice/send', invoice);
         return response.data;
     } catch (error) {
-        if (error instanceof AxiosError && error.response)
+        if (error instanceof AxiosError && error.response) {
             return error.response.data as SendInvoiceResponse;
+        }
         throw error;
     }
 }
@@ -348,41 +319,48 @@ export interface ListInvoicesParams {
     date?: { from?: string; to?: string };
 }
 
-function mapCachedToLegacy(invoice: CachedInvoice): Invoice {
-    return {
-        numerKsef: invoice.ksefReferenceNumber,
-        numerFaktury: invoice.invoiceNumber || '',
-        nazwaKontrahenta: invoice.direction === 'issued'
-            ? invoice.buyerName || ''
-            : invoice.sellerName || '',
-        nipKontrahenta: invoice.direction === 'issued'
-            ? invoice.buyerNip || ''
-            : invoice.sellerNip || '',
-        kwotaBrutto: invoice.grossAmount || 0,
-        dataWystawienia: invoice.invoiceDate?.split('T')[0] || '',
-        status: 'accepted' as UpoStatus,
-        kwotaNetto: invoice.netAmount || undefined,
-        kwotaVat: invoice.vatAmount || undefined,
-        nazwaSprzedawcy: invoice.sellerName || undefined,
-        nipSprzedawcy: invoice.sellerNip || undefined,
-        invoiceHash: invoice.invoiceHash || undefined,
-    };
-}
-
 export async function listIssued(): Promise<Invoice[]> {
     const response = await getCachedInvoices();
     if (!response.success || !response.data) return [];
+
     return response.data.invoices
         .filter(i => i.direction === 'issued')
-        .map(mapCachedToLegacy);
+        .map(invoice => ({
+            numerKsef: invoice.ksefReferenceNumber,
+            numerFaktury: invoice.invoiceNumber || '',
+            nazwaKontrahenta: invoice.buyerName || '',
+            nipKontrahenta: invoice.buyerNip || '',
+            kwotaBrutto: invoice.grossAmount || 0,
+            dataWystawienia: invoice.invoiceDate?.split('T')[0] || '',
+            status: 'accepted' as UpoStatus,
+            kwotaNetto: invoice.netAmount || undefined,
+            kwotaVat: invoice.vatAmount || undefined,
+            nazwaSprzedawcy: invoice.sellerName || undefined,
+            nipSprzedawcy: invoice.sellerNip || undefined,
+            invoiceHash: invoice.invoiceHash || undefined,
+        }));
 }
 
 export async function listReceived(): Promise<Invoice[]> {
     const response = await getCachedInvoices();
     if (!response.success || !response.data) return [];
+
     return response.data.invoices
         .filter(i => i.direction === 'received')
-        .map(mapCachedToLegacy);
+        .map(invoice => ({
+            numerKsef: invoice.ksefReferenceNumber,
+            numerFaktury: invoice.invoiceNumber || '',
+            nazwaKontrahenta: invoice.sellerName || '',
+            nipKontrahenta: invoice.sellerNip || '',
+            kwotaBrutto: invoice.grossAmount || 0,
+            dataWystawienia: invoice.invoiceDate?.split('T')[0] || '',
+            status: 'accepted' as UpoStatus,
+            kwotaNetto: invoice.netAmount || undefined,
+            kwotaVat: invoice.vatAmount || undefined,
+            nazwaSprzedawcy: invoice.sellerName || undefined,
+            nipSprzedawcy: invoice.sellerNip || undefined,
+            invoiceHash: invoice.invoiceHash || undefined,
+        }));
 }
 
 export const getReceivedInvoices = listReceived;
@@ -451,8 +429,9 @@ export interface GeneratePdfRequest {
 }
 
 export async function downloadInvoicePdf(request: GeneratePdfRequest): Promise<void> {
-    const token = localStorage.getItem('authToken');
+    const token = tokenStorage.get();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
@@ -465,7 +444,7 @@ export async function downloadInvoicePdf(request: GeneratePdfRequest): Promise<v
 
     if (!response.ok) {
         if (response.status === 401) {
-            localStorage.removeItem('authToken');
+            tokenStorage.clear();
             window.location.hash = '#/login';
             throw new Error('Sesja wygasła. Zaloguj się ponownie.');
         }
@@ -480,7 +459,9 @@ export async function downloadInvoicePdf(request: GeneratePdfRequest): Promise<v
     let fileName = 'faktura.pdf';
     if (contentDisposition) {
         const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (match && match[1]) fileName = match[1].replace(/['"]/g, '');
+        if (match && match[1]) {
+            fileName = match[1].replace(/['"]/g, '');
+        }
     }
 
     const a = document.createElement('a');
@@ -491,4 +472,3 @@ export async function downloadInvoicePdf(request: GeneratePdfRequest): Promise<v
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
-

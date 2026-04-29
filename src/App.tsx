@@ -1,4 +1,3 @@
-// src/App.tsx
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthProvider';
 import { useAuth } from './hooks/useAuth';
@@ -15,30 +14,20 @@ import Reports from './views/reports/Reports';
 import Settings from './views/settings/Settings';
 import type { ReactNode } from 'react';
 
-function ProtectedRoute({ children }: { children: ReactNode }) {
-    const { isAppAuthenticated, isLoading } = useAuth();
-
-    if (isLoading) {
-        return (
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100vh',
-                background: '#0e1116',
-                color: '#a4a9b6',
-                fontSize: '16px',
-            }}>
-                ⏳ Ładowanie...
-            </div>
-        );
-    }
-
-    if (!isAppAuthenticated) {
-        return <Navigate to="/login" replace />;
-    }
-
-    return <>{children}</>;
+function LoadingScreen() {
+    return (
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100vh',
+            background: '#0e1116',
+            color: '#a4a9b6',
+            fontSize: '16px',
+        }}>
+            ⏳ Ładowanie...
+        </div>
+    );
 }
 
 function InvoiceDetailsPlaceholder() {
@@ -48,6 +37,20 @@ function InvoiceDetailsPlaceholder() {
             <p>Widok szczegółów faktury będzie dostępny wkrótce.</p>
         </div>
     );
+}
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+    const { isAppAuthenticated, isLoading } = useAuth();
+
+    if (isLoading) {
+        return <LoadingScreen />;
+    }
+
+    if (!isAppAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
+
+    return <>{children}</>;
 }
 
 function AppRoutes() {
@@ -72,10 +75,8 @@ function AppRoutes() {
 
 export default function App() {
     return (
-        <AuthProvider>
-            <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                <AppRoutes />
-            </HashRouter>
-        </AuthProvider>
+        <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <AppRoutes />
+        </HashRouter>
     );
 }

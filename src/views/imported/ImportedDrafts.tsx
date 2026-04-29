@@ -1,14 +1,13 @@
-// src/views/imported/ImportedDrafts.tsx
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
+import InvoicePagination from '../../components/invoices/InvoicePagination';
 import { getDrafts, approveDraft, rejectDraft, mapDraftToInvoiceForm } from '../../services/externalDraftsApi';
 import type { ExternalDraft, ExternalDraftStatus } from '../../types/externalDraft';
 import './ImportedDrafts.css';
-import '../dashboard/Dashboard.css';
 
 type StatusFilter = 'all' | ExternalDraftStatus;
 
@@ -23,18 +22,6 @@ const STATUS_CLASSES: Record<ExternalDraftStatus, string> = {
     APPROVED: 'status-approved',
     REJECTED: 'status-rejected',
 };
-
-function buildPageNumbers(current: number, total: number): (number | 'dots')[] {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    const pages: (number | 'dots')[] = [1];
-    const left = Math.max(2, current - 1);
-    const right = Math.min(total - 1, current + 1);
-    if (left > 2) pages.push('dots');
-    for (let i = left; i <= right; i++) pages.push(i);
-    if (right < total - 1) pages.push('dots');
-    pages.push(total);
-    return pages;
-}
 
 export default function ImportedDrafts() {
     const navigate = useNavigate();
@@ -78,34 +65,33 @@ export default function ImportedDrafts() {
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const pageClamped = Math.min(page, totalPages);
     const paged = drafts.slice((pageClamped - 1) * pageSize, pageClamped * pageSize);
-    const pageNumbers = buildPageNumbers(pageClamped, totalPages);
 
-    const handleApproveAndEdit = (draft: ExternalDraft) => {
+    function handleApproveAndEdit(draft: ExternalDraft) {
         const formData = mapDraftToInvoiceForm(draft);
         sessionStorage.setItem('importedInvoiceData', JSON.stringify(formData));
         sessionStorage.setItem('importedDraftId', draft.id);
         navigate('/invoices/new?source=imported');
-    };
+    }
 
-    const handleOpenRejectModal = (draftId: string) => {
+    function handleOpenRejectModal(draftId: string) {
         setDraftToReject(draftId);
         setRejectReason('');
         setRejectModalOpen(true);
-    };
+    }
 
-    const handleConfirmReject = () => {
+    function handleConfirmReject() {
         if (draftToReject && rejectReason.trim()) {
             rejectMutation.mutate({ id: draftToReject, reason: rejectReason.trim() });
         }
-    };
+    }
 
-    const formatDate = (dateStr: string) => {
+    function formatDate(dateStr: string) {
         return new Date(dateStr).toLocaleDateString('pl-PL');
-    };
+    }
 
-    const formatMoney = (amount: number, currency: string) => {
+    function formatMoney(amount: number, currency: string) {
         return amount.toLocaleString('pl-PL', { style: 'currency', currency });
-    };
+    }
 
     return (
         <div className="dash-root">
@@ -122,7 +108,11 @@ export default function ImportedDrafts() {
                         <div className="ops-header">
                             <h2>Szkice do przetworzenia</h2>
                             <div className="ops-actions">
-                                <PrimaryButton onClick={() => refetch()} disabled={isLoading || isFetching} icon="⟳">
+                                <PrimaryButton
+                                    onClick={() => refetch()}
+                                    disabled={isLoading || isFetching}
+                                    icon="⟳"
+                                >
                                     {isLoading || isFetching ? 'Pobieranie...' : 'Odśwież'}
                                 </PrimaryButton>
                             </div>
@@ -256,40 +246,13 @@ export default function ImportedDrafts() {
                             )}
                         </div>
 
-                        {totalPages > 1 && (
-                            <div className="pagination">
-                                <button
-                                    className="pagination-nav"
-                                    disabled={pageClamped <= 1}
-                                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                                >
-                                    ‹ <span>Poprzednia</span>
-                                </button>
-                                {pageNumbers.map((p, i) =>
-                                    p === 'dots' ? (
-                                        <span key={`dots-${i}`} className="pagination-dots">…</span>
-                                    ) : (
-                                        <button
-                                            key={p}
-                                            className={`pagination-page ${p === pageClamped ? 'active' : ''}`}
-                                            onClick={() => setPage(p)}
-                                        >
-                                            {p}
-                                        </button>
-                                    )
-                                )}
-                                <button
-                                    className="pagination-nav"
-                                    disabled={pageClamped >= totalPages}
-                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                >
-                                    <span>Następna</span> ›
-                                </button>
-                                <span className="pagination-info">
-                                    {(pageClamped - 1) * pageSize + 1}–{Math.min(pageClamped * pageSize, total)} z {total}
-                                </span>
-                            </div>
-                        )}
+                        <InvoicePagination
+                            page={pageClamped}
+                            totalPages={totalPages}
+                            total={total}
+                            pageSize={pageSize}
+                            onPageChange={setPage}
+                        />
                     </section>
                 </div>
             </main>

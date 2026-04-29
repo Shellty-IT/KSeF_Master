@@ -1,7 +1,5 @@
-// src/views/clients/ClientsView.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import './ClientsView.css';
-import '../dashboard/Dashboard.css';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
@@ -28,7 +26,7 @@ const emptyForm: ClientFormData = {
 };
 
 export default function ClientsView() {
-    const [clients, setClients] = useState<Client[]>([]);
+    const [clients, setClients] = useState<Client[]>(() => getClients());
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -36,13 +34,8 @@ export default function ClientsView() {
     const [errors, setErrors] = useState<string[]>([]);
     const [info, setInfo] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadClients();
-    }, []);
-
     function loadClients() {
-        const data = getClients();
-        setClients(data);
+        setClients(getClients());
     }
 
     const filteredClients = clients.filter(client => {
@@ -55,6 +48,11 @@ export default function ClientsView() {
             (client.email?.toLowerCase().includes(term) ?? false)
         );
     });
+
+    function showInfo(msg: string) {
+        setInfo(msg);
+        setTimeout(() => setInfo(null), 2000);
+    }
 
     function openAddModal() {
         setEditingClient(null);
@@ -87,27 +85,19 @@ export default function ClientsView() {
     function validateForm(): string[] {
         const errs: string[] = [];
 
-        if (!formData.name.trim()) {
-            errs.push('Nazwa firmy jest wymagana.');
-        }
-
+        if (!formData.name.trim()) errs.push('Nazwa firmy jest wymagana.');
         if (!formData.nip.trim()) {
             errs.push('NIP jest wymagany.');
         } else if (!isValidNip(sanitizeNip(formData.nip))) {
             errs.push('NIP jest nieprawidłowy (wymagane 10 cyfr + poprawna suma kontrolna).');
         }
-
-        if (!formData.address.trim()) {
-            errs.push('Adres jest wymagany.');
-        }
-
+        if (!formData.address.trim()) errs.push('Adres jest wymagany.');
         if (formData.bankAccount) {
             const digits = formData.bankAccount.replace(/[^0-9]/g, '');
             if (digits.length > 0 && digits.length !== 26) {
                 errs.push('Numer konta bankowego musi mieć 26 cyfr.');
             }
         }
-
         if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             errs.push('Nieprawidłowy format adresu email.');
         }
@@ -118,10 +108,7 @@ export default function ClientsView() {
     function handleSave() {
         const validationErrors = validateForm();
         setErrors(validationErrors);
-
-        if (validationErrors.length > 0) {
-            return;
-        }
+        if (validationErrors.length > 0) return;
 
         const clientData = {
             name: formData.name.trim(),
@@ -134,23 +121,21 @@ export default function ClientsView() {
 
         if (editingClient) {
             saveClient({ ...clientData, id: editingClient.id });
-            setInfo('Kontrahent został zaktualizowany.');
+            showInfo('Kontrahent został zaktualizowany.');
         } else {
             saveClient(clientData);
-            setInfo('Kontrahent został dodany.');
+            showInfo('Kontrahent został dodany.');
         }
 
         loadClients();
         closeModal();
-        setTimeout(() => setInfo(null), 2000);
     }
 
     function handleDelete(client: Client) {
         if (window.confirm(`Czy na pewno chcesz usunąć kontrahenta "${client.name}"?`)) {
             deleteClient(client.id);
             loadClients();
-            setInfo('Kontrahent został usunięty.');
-            setTimeout(() => setInfo(null), 2000);
+            showInfo('Kontrahent został usunięty.');
         }
     }
 
@@ -190,9 +175,7 @@ export default function ClientsView() {
                             </div>
                         </div>
 
-                        {info && (
-                            <div className="info-banner">{info}</div>
-                        )}
+                        {info && <div className="info-banner">{info}</div>}
 
                         {clients.length === 0 ? (
                             <div className="empty-state">
@@ -207,7 +190,7 @@ export default function ClientsView() {
                             <div className="empty-state">
                                 <div className="empty-icon">🔍</div>
                                 <h3>Brak wyników</h3>
-                                <p>Nie znaleziono kontrahentów pasujących do "{searchTerm}"</p>
+                                <p>Nie znaleziono kontrahentów pasujących do „{searchTerm}"</p>
                             </div>
                         ) : (
                             <div className="clients-grid">
@@ -216,30 +199,16 @@ export default function ClientsView() {
                                         <div className="client-info">
                                             <h3 className="client-name">{client.name}</h3>
                                             <div className="client-nip">NIP: {client.nip}</div>
-                                            {client.address && (
-                                                <div className="client-address">{client.address}</div>
-                                            )}
-                                            {client.bankAccount && (
-                                                <div className="client-bank">🏦 {client.bankAccount}</div>
-                                            )}
-                                            {client.email && (
-                                                <div className="client-email">✉️ {client.email}</div>
-                                            )}
-                                            {client.phone && (
-                                                <div className="client-phone">📞 {client.phone}</div>
-                                            )}
+                                            {client.address && <div className="client-address">{client.address}</div>}
+                                            {client.bankAccount && <div className="client-bank">🏦 {client.bankAccount}</div>}
+                                            {client.email && <div className="client-email">✉️ {client.email}</div>}
+                                            {client.phone && <div className="client-phone">📞 {client.phone}</div>}
                                         </div>
                                         <div className="client-actions">
-                                            <button
-                                                className="btn-light small"
-                                                onClick={() => openEditModal(client)}
-                                            >
+                                            <button className="btn-light small" onClick={() => openEditModal(client)}>
                                                 ✏️ Edytuj
                                             </button>
-                                            <button
-                                                className="btn-light small danger"
-                                                onClick={() => handleDelete(client)}
-                                            >
+                                            <button className="btn-light small danger" onClick={() => handleDelete(client)}>
                                                 🗑️ Usuń
                                             </button>
                                         </div>
@@ -261,9 +230,7 @@ export default function ClientsView() {
                                     <div className="error-message">
                                         <strong>Popraw błędy:</strong>
                                         <ul>
-                                            {errors.map((err, i) => (
-                                                <li key={i}>{err}</li>
-                                            ))}
+                                            {errors.map((err, i) => <li key={i}>{err}</li>)}
                                         </ul>
                                     </div>
                                 )}
@@ -279,7 +246,6 @@ export default function ClientsView() {
                                             className="input"
                                         />
                                     </label>
-
                                     <label className="field">
                                         <span className="label">NIP *</span>
                                         <input
@@ -292,7 +258,6 @@ export default function ClientsView() {
                                             inputMode="numeric"
                                         />
                                     </label>
-
                                     <label className="field">
                                         <span className="label">Adres *</span>
                                         <input
@@ -303,13 +268,11 @@ export default function ClientsView() {
                                             className="input"
                                         />
                                     </label>
-
                                     <BankAccountInput
                                         label="Rachunek bankowy"
                                         value={formData.bankAccount}
                                         onChange={(v) => updateField('bankAccount', v)}
                                     />
-
                                     <label className="field">
                                         <span className="label">Email</span>
                                         <input
@@ -320,7 +283,6 @@ export default function ClientsView() {
                                             className="input"
                                         />
                                     </label>
-
                                     <label className="field">
                                         <span className="label">Telefon</span>
                                         <input
@@ -334,9 +296,7 @@ export default function ClientsView() {
                                 </div>
 
                                 <div className="modal-footer">
-                                    <button className="btn-light" onClick={closeModal}>
-                                        Anuluj
-                                    </button>
+                                    <button className="btn-light" onClick={closeModal}>Anuluj</button>
                                     <PrimaryButton onClick={handleSave} icon="💾">
                                         {editingClient ? 'Zapisz zmiany' : 'Dodaj kontrahenta'}
                                     </PrimaryButton>

@@ -1,7 +1,5 @@
-// src/views/settings/Settings.tsx
 import { useState } from 'react';
 import './Settings.css';
-import '../dashboard/Dashboard.css';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 import TabKsefConnection from './tabs/TabKsefConnection';
@@ -11,13 +9,7 @@ import TabInvoiceDefaults from './tabs/TabInvoiceDefaults';
 import TabPrintPdf from './tabs/TabPrintPdf';
 import TabDangerZone from './tabs/TabDangerZone';
 
-type SettingsTab =
-    | 'ksef'
-    | 'company'
-    | 'fraud'
-    | 'invoiceDefaults'
-    | 'print'
-    | 'danger';
+type SettingsTab = 'ksef' | 'company' | 'fraud' | 'invoiceDefaults' | 'print' | 'danger';
 
 interface TabConfig {
     id: SettingsTab;
@@ -26,12 +18,12 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-    { id: 'ksef',           label: 'Połączenie KSeF',   icon: '🔗' },
-    { id: 'company',        label: 'Dane firmy',         icon: '🏢' },
-    { id: 'fraud',          label: 'Wykrywanie oszustw', icon: '🚨' },
-    { id: 'invoiceDefaults',label: 'Domyślne faktury',   icon: '📄' },
-    { id: 'print',          label: 'Druk / PDF',         icon: '🖨️' },
-    { id: 'danger',         label: 'Strefa ryzyka',      icon: '⚠️' },
+    { id: 'ksef',            label: 'Połączenie KSeF',   icon: '🔗' },
+    { id: 'company',         label: 'Dane firmy',         icon: '🏢' },
+    { id: 'fraud',           label: 'Wykrywanie oszustw', icon: '🚨' },
+    { id: 'invoiceDefaults', label: 'Domyślne faktury',   icon: '📄' },
+    { id: 'print',           label: 'Druk / PDF',         icon: '🖨️' },
+    { id: 'danger',          label: 'Strefa ryzyka',      icon: '⚠️' },
 ];
 
 export default function Settings() {

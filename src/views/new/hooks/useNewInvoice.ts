@@ -1,34 +1,22 @@
-// src/views/new/hooks/useNewInvoice.ts
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { round2 } from '../../../helpers/money';
-import { isValidNip, sanitizeNip } from '../../../helpers/nip';
+import { sanitizeNip } from '../../../helpers/nip';
 import { calcLine } from '../../../helpers/vat';
 import { sendInvoice, type CreateInvoiceRequest } from '../../../services/ksefApi';
 import { approveDraft } from '../../../services/externalDraftsApi';
 import { useAuth } from '../../../hooks/useAuth';
-import type { InvoiceDraft, InvoiceLineDraft, InvoiceTotals } from '../types';
+import { useInvoiceTotals } from './useInvoiceTotals';
+import { useInvoiceValidation } from './useInvoiceValidation';
+import type { InvoiceDraft, InvoiceLineDraft } from '../types';
 import type { PartyValue } from '../../../components/form/ContractorSelect';
-import {
-    DRAFT_KEY,
-    SELLER_KEY,
-    emptyLine,
-} from '../constants';
-import {
-    addDays,
-    loadDraft,
-    loadImportedData,
-    saveSentInvoice,
-    mapVatRateToKsef,
-    isValidBankAccount,
-    createEmptyDraft,
-} from '../utils';
+import { DRAFT_KEY, SELLER_KEY, emptyLine } from '../constants';
+import { addDays, loadDraft, loadImportedData, saveSentInvoice, mapVatRateToKsef, createEmptyDraft } from '../utils';
 
 export default function useNewInvoice() {
-    const mountedRef = useRef(false);
     const { nip: sessionNip, isAuthenticated } = useAuth();
     const [searchParams] = useSearchParams();
     const isImported = searchParams.get('source') === 'imported';
+    const { validate } = useInvoiceValidation();
 
     const [importedDraftId, setImportedDraftId] = useState<string | null>(null);
 
@@ -49,6 +37,9 @@ export default function useNewInvoice() {
     const [errors, setErrors] = useState<string[]>([]);
     const [info, setInfo] = useState<string | null>(null);
     const [isSending, setIsSending] = useState(false);
+    const [invoiceSent, setInvoiceSent] = useState(false);
+
+    const totals = useInvoiceTotals(draft.lines);
 
     useEffect(() => {
         if (sessionNip && draft.seller.nip !== sessionNip) {
@@ -60,20 +51,18 @@ export default function useNewInvoice() {
     }, [sessionNip, draft.seller.nip]);
 
     useEffect(() => {
-        if (!mountedRef.current) {
-            mountedRef.current = true;
-            return;
-        }
         if (isImported) return;
-        const t = setTimeout(() => {
+
+        const timer = setTimeout(() => {
             try {
                 localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
                 localStorage.setItem(SELLER_KEY, JSON.stringify(draft.seller));
             } catch {
-                // fallback
+                // noop
             }
         }, 1000);
-        return () => clearTimeout(t);
+
+        return () => clearTimeout(timer);
     }, [draft, isImported]);
 
     useEffect(() => {
@@ -85,82 +74,6 @@ export default function useNewInvoice() {
             },
         }));
     }, [draft.issueDate, draft.payment.dueDays]);
-
-    const totals: InvoiceTotals = useMemo(() => {
-        let totalNet = 0;
-        let totalVat = 0;
-        let totalGross = 0;
-        const perRate: Record<string, { net: number; vat: number; gross: number }> = {};
-
-        draft.lines.forEach(line => {
-            const { net, vat, gross } = calcLine({
-                qty: line.qty,
-                priceNet: line.priceNet,
-                discount: line.discount || 0,
-                vatRate: line.vatRate,
-            });
-            totalNet += net;
-            totalVat += vat;
-            totalGross += gross;
-
-            const rateKey = typeof line.vatRate === 'number' ? `${line.vatRate}%` : line.vatRate;
-            if (!perRate[rateKey]) perRate[rateKey] = { net: 0, vat: 0, gross: 0 };
-            perRate[rateKey].net += net;
-            perRate[rateKey].vat += vat;
-            perRate[rateKey].gross += gross;
-        });
-
-        return {
-            net: round2(totalNet),
-            vat: round2(totalVat),
-            gross: round2(totalGross),
-            perRate,
-        };
-    }, [draft.lines]);
-
-    function validate(): string[] {
-        const errs: string[] = [];
-
-        if (!draft.number.trim()) errs.push('Numer faktury jest wymagany.');
-        if (!draft.issueDate) errs.push('Data wystawienia jest wymagana.');
-        if (!draft.sellDate) errs.push('Data sprzedaży jest wymagana.');
-        if (draft.currency !== 'PLN') errs.push('Waluta musi być PLN.');
-
-        if (!isValidNip(draft.seller.nip))
-            errs.push('NIP sprzedawcy jest nieprawidłowy (10 cyfr + suma kontrolna).');
-        if (!draft.seller.name.trim()) errs.push('Nazwa sprzedawcy jest wymagana.');
-        if (!draft.seller.address.trim()) errs.push('Adres sprzedawcy jest wymagany.');
-
-        if (!isValidNip(draft.buyer.nip))
-            errs.push('NIP nabywcy jest nieprawidłowy (10 cyfr + suma kontrolna).');
-        if (!draft.buyer.name.trim()) errs.push('Nazwa nabywcy jest wymagana.');
-        if (!draft.buyer.address.trim()) errs.push('Adres nabywcy jest wymagany.');
-
-        if (!draft.lines.length) errs.push('Dodaj co najmniej jedną pozycję.');
-        draft.lines.forEach((l, idx) => {
-            if (!l.name.trim()) errs.push(`Pozycja #${idx + 1}: nazwa jest wymagana.`);
-            if (!(l.qty > 0)) errs.push(`Pozycja #${idx + 1}: ilość musi być dodatnia.`);
-            if (!(l.priceNet > 0)) errs.push(`Pozycja #${idx + 1}: cena netto musi być dodatnia.`);
-        });
-
-        if (Math.abs(round2(totals.net + totals.vat) - totals.gross) > 0.01) {
-            errs.push('Suma kontrolna nie zgadza się: netto + VAT musi równać się brutto.');
-        }
-
-        if (draft.payment.method === 'przelew') {
-            if (!draft.payment.bankAccount) {
-                errs.push('Dla przelewu wymagany jest rachunek bankowy.');
-            } else if (!isValidBankAccount(draft.payment.bankAccount)) {
-                errs.push('Rachunek bankowy musi mieć 26 cyfr.');
-            }
-        }
-
-        return errs;
-    }
-
-    function updateField<K extends keyof InvoiceDraft>(key: K, value: InvoiceDraft[K]) {
-        setDraft(prev => ({ ...prev, [key]: value }));
-    }
 
     function updateBuyer(v: PartyValue) {
         setDraft(prev => ({
@@ -208,12 +121,13 @@ export default function useNewInvoice() {
         localStorage.removeItem(DRAFT_KEY);
         sessionStorage.removeItem('importedDraftId');
         setImportedDraftId(null);
+        setInvoiceSent(false);
         setDraft(createEmptyDraft(sessionNip));
         setErrors([]);
     }
 
     function handlePrint() {
-        const errs = validate();
+        const errs = validate(draft, totals);
         setErrors(errs);
         if (errs.length > 0) return;
         setTimeout(() => window.print(), 100);
@@ -225,7 +139,7 @@ export default function useNewInvoice() {
             return;
         }
 
-        const errs = validate();
+        const errs = validate(draft, totals);
         setErrors(errs);
         if (errs.length > 0) return;
 
@@ -333,6 +247,8 @@ export default function useNewInvoice() {
                 setInfo('✅ Faktura została przyjęta do przetwarzania w KSeF.');
             }
 
+            setInvoiceSent(true);
+
             setTimeout(() => {
                 if (window.confirm('Faktura została wysłana. Czy chcesz wyczyścić formularz?')) {
                     clearForm();
@@ -355,8 +271,8 @@ export default function useNewInvoice() {
         isSending,
         isAuthenticated,
         isImported,
+        invoiceSent,
         totals,
-        updateField,
         updateBuyer,
         updateLine,
         addLine,

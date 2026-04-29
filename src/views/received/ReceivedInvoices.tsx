@@ -1,39 +1,25 @@
-// src/views/received/ReceivedInvoices.tsx
 import { useMemo, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import './ReceivedInvoices.css';
 import '../dashboard/Dashboard.css';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
 import InvoiceFilters from '../../components/filters/InvoiceFilters';
 import FraudBadge from '../../components/alerts/FraudBadge';
-import { listReceived, syncInvoices, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
+import KsefStatusAlerts from '../../components/invoices/KsefStatusAlerts';
+import InvoicePagination from '../../components/invoices/InvoicePagination';
+import { listReceived, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
 import { useInvoiceFilters } from '../../hooks/useInvoiceFilters';
 import { useFraudDetection } from '../../hooks/useFraudDetection';
+import { useSyncInvoices } from '../../hooks/useSyncInvoices';
 import { useAuth } from '../../hooks/useAuth';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 
-function buildPageNumbers(current: number, total: number): (number | 'dots')[] {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    const pages: (number | 'dots')[] = [1];
-    const left = Math.max(2, current - 1);
-    const right = Math.min(total - 1, current + 1);
-    if (left > 2) pages.push('dots');
-    for (let i = left; i <= right; i++) pages.push(i);
-    if (right < total - 1) pages.push('dots');
-    pages.push(total);
-    return pages;
-}
-
 export default function ReceivedInvoices() {
     const { isKsefConnected, needsCompanySetup } = useAuth();
-    const navigate = useNavigate();
-    const queryClient = useQueryClient();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
-    const [syncError, setSyncError] = useState<string | null>(null);
 
     const query = useQuery<Invoice[], Error>({
         queryKey: ['receivedInvoices'],
@@ -45,20 +31,7 @@ export default function ReceivedInvoices() {
     const data: Invoice[] = query.data ?? [];
     const { isLoading, isFetching, error } = query;
 
-    const syncMutation = useMutation({
-        mutationFn: syncInvoices,
-        onSuccess: (result) => {
-            setSyncError(null);
-            if (result.success) {
-                queryClient.invalidateQueries({ queryKey: ['receivedInvoices'] });
-            } else {
-                setSyncError(result.error ?? 'Błąd synchronizacji');
-            }
-        },
-        onError: (err: Error) => {
-            setSyncError(err.message ?? 'Błąd synchronizacji');
-        },
-    });
+    const { sync, isSyncing, syncError } = useSyncInvoices({ queryKey: ['receivedInvoices'] });
 
     const {
         filters,
@@ -85,7 +58,6 @@ export default function ReceivedInvoices() {
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const pageClamped = Math.min(page, totalPages);
     const paged = finalFilteredInvoices.slice((pageClamped - 1) * pageSize, pageClamped * pageSize);
-    const pageNumbers = buildPageNumbers(pageClamped, totalPages);
 
     const errorMessage = error
         ? 'Nie udało się pobrać faktur. Sprawdź, czy serwer backendu jest uruchomiony.'
@@ -142,34 +114,10 @@ export default function ReceivedInvoices() {
                         <p className="subtitle">Lista dokumentów odebranych w KSeF</p>
                     </header>
 
-                    {needsCompanySetup && (
-                        <div className="alert-box warning">
-                            <span className="alert-icon">⚙️</span>
-                            <div className="alert-content">
-                                <strong>Firma nie jest skonfigurowana</strong>
-                                <p>
-                                    Aby pobierać faktury z KSeF, skonfiguruj dane firmy (NIP + token autoryzacyjny).
-                                    Użyj przycisku „Skonfiguruj firmę" w panelu bocznym.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {!needsCompanySetup && !isKsefConnected && (
-                        <div className="alert-box warning">
-                            <span className="alert-icon">🔌</span>
-                            <div className="alert-content">
-                                <strong>Brak połączenia z KSeF</strong>
-                                <p>
-                                    Połącz się z Krajowym Systemem e-Faktur, aby wyświetlić odebrane faktury.
-                                    Użyj przycisku „Połącz z KSeF" w panelu bocznym lub przejdź do{' '}
-                                    <button onClick={() => navigate('/settings')} className="link-button">
-                                        Ustawień
-                                    </button>.
-                                </p>
-                            </div>
-                        </div>
-                    )}
+                    <KsefStatusAlerts
+                        needsCompanySetup={needsCompanySetup}
+                        isKsefConnected={isKsefConnected}
+                    />
 
                     {syncError && (
                         <div className="alert-box warning">
@@ -202,11 +150,11 @@ export default function ReceivedInvoices() {
                                     </span>
                                 )}
                                 <PrimaryButton
-                                    onClick={() => syncMutation.mutate()}
-                                    disabled={!isKsefConnected || syncMutation.isPending}
+                                    onClick={sync}
+                                    disabled={!isKsefConnected || isSyncing}
                                     icon="☁"
                                 >
-                                    {syncMutation.isPending ? 'Synchronizacja...' : 'Synchronizuj z KSeF'}
+                                    {isSyncing ? 'Synchronizacja...' : 'Synchronizuj z KSeF'}
                                 </PrimaryButton>
                             </div>
                         </div>
@@ -339,43 +287,13 @@ export default function ReceivedInvoices() {
                             )}
                         </div>
 
-                        {totalPages > 1 && (
-                            <div className="pagination">
-                                <button
-                                    className="pagination-nav"
-                                    disabled={pageClamped <= 1}
-                                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                                >
-                                    ‹ <span>Poprzednia</span>
-                                </button>
-
-                                {pageNumbers.map((p, i) =>
-                                    p === 'dots' ? (
-                                        <span key={`dots-${i}`} className="pagination-dots">…</span>
-                                    ) : (
-                                        <button
-                                            key={p}
-                                            className={`pagination-page ${p === pageClamped ? 'active' : ''}`}
-                                            onClick={() => setPage(p)}
-                                        >
-                                            {p}
-                                        </button>
-                                    )
-                                )}
-
-                                <button
-                                    className="pagination-nav"
-                                    disabled={pageClamped >= totalPages}
-                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                >
-                                    <span>Następna</span> ›
-                                </button>
-
-                                <span className="pagination-info">
-                                    {(pageClamped - 1) * pageSize + 1}–{Math.min(pageClamped * pageSize, total)} z {total}
-                                </span>
-                            </div>
-                        )}
+                        <InvoicePagination
+                            page={pageClamped}
+                            totalPages={totalPages}
+                            total={total}
+                            pageSize={pageSize}
+                            onPageChange={setPage}
+                        />
                     </section>
                 </div>
             </main>

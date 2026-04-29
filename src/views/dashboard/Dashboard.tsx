@@ -1,12 +1,21 @@
-// src/views/dashboard/Dashboard.tsx
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { getInvoices, type InvoiceMetadata } from '../../services/ksefApi';
 import { useAuth } from '../../hooks/useAuth';
+import KsefStatusAlerts from '../../components/invoices/KsefStatusAlerts';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
+
+const CHART_DAYS = Array.from({ length: 14 }, (_, i) => ({
+    day: i + 1,
+    issued: Math.round(10 + 20 * Math.sin(i / 2) + (i % 3) * 3),
+    received: Math.round(8 + 18 * Math.cos(i / 3) + (i % 4)),
+}));
+
+const BALANCE_ISSUED = CHART_DAYS.reduce((sum, d) => sum + d.issued, 0);
+const BALANCE_RECEIVED = CHART_DAYS.reduce((sum, d) => sum + d.received, 0);
 
 export default function Dashboard() {
     const { isKsefConnected, needsCompanySetup, user, nip } = useAuth();
@@ -44,27 +53,14 @@ export default function Dashboard() {
         ? (error as Error).message || 'Nie udało się pobrać faktur.'
         : null;
 
-    const stats = useMemo(() => {
-        const total = invoices.length;
-        const totalGross = invoices.reduce((sum, inv) => sum + (inv.grossAmount || 0), 0);
-        return { total, totalGross };
-    }, [invoices]);
-
-    const chartDays = Array.from({ length: 14 }).map((_, i) => ({
-        day: i + 1,
-        issued: Math.round(10 + 20 * Math.sin(i / 2) + (i % 3) * 3),
-        received: Math.round(8 + 18 * Math.cos(i / 3) + (i % 4)),
-    }));
-    const balanceIssued = chartDays.reduce((sum, d) => sum + d.issued, 0);
-    const balanceReceived = chartDays.reduce((sum, d) => sum + d.received, 0);
+    const stats = useMemo(() => ({
+        total: invoices.length,
+        totalGross: invoices.reduce((sum, inv) => sum + (inv.grossAmount || 0), 0),
+    }), [invoices]);
 
     const subtitleText = useMemo(() => {
-        if (needsCompanySetup) {
-            return 'Skonfiguruj firmę, aby rozpocząć pracę z KSeF';
-        }
-        if (!isKsefConnected) {
-            return `Firma: ${user?.company?.companyName || '—'} • NIP: ${nip || '—'} • Niepołączony z KSeF`;
-        }
+        if (needsCompanySetup) return 'Skonfiguruj firmę, aby rozpocząć pracę z KSeF';
+        if (!isKsefConnected) return `Firma: ${user?.company?.companyName || '—'} • NIP: ${nip || '—'} • Niepołączony z KSeF`;
         return `Firma: ${user?.company?.companyName || '—'} • NIP: ${nip || '—'} • Połączony z KSeF`;
     }, [needsCompanySetup, isKsefConnected, user, nip]);
 
@@ -79,34 +75,10 @@ export default function Dashboard() {
                         <p className="subtitle">{subtitleText}</p>
                     </header>
 
-                    {needsCompanySetup && (
-                        <div className="alert-box warning">
-                            <span className="alert-icon">⚙️</span>
-                            <div className="alert-content">
-                                <strong>Firma nie jest skonfigurowana</strong>
-                                <p>
-                                    Aby pobierać i wystawiać faktury w KSeF, skonfiguruj dane firmy (NIP + token autoryzacyjny).
-                                    Użyj przycisku „Skonfiguruj firmę" w panelu bocznym.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {!needsCompanySetup && !isKsefConnected && (
-                        <div className="alert-box warning">
-                            <span className="alert-icon">🔌</span>
-                            <div className="alert-content">
-                                <strong>Brak połączenia z KSeF</strong>
-                                <p>
-                                    Połącz się z Krajowym Systemem e-Faktur, aby pobierać i wystawiać faktury.
-                                    Użyj przycisku „Połącz z KSeF" w panelu bocznym lub przejdź do{' '}
-                                    <button onClick={() => navigate('/settings')} className="link-button">
-                                        Ustawień
-                                    </button>.
-                                </p>
-                            </div>
-                        </div>
-                    )}
+                    <KsefStatusAlerts
+                        needsCompanySetup={needsCompanySetup}
+                        isKsefConnected={isKsefConnected}
+                    />
 
                     <section className="kpi-grid" aria-label="Szybka analiza">
                         <div className="kpi-card">
@@ -120,23 +92,23 @@ export default function Dashboard() {
                             <div className="kpi-value">
                                 {!isKsefConnected ? '—' : isLoading ? '...' : stats.totalGross.toLocaleString('pl-PL', {
                                     style: 'currency',
-                                    currency: 'PLN'
+                                    currency: 'PLN',
                                 })}
                             </div>
                         </div>
                         <div className="kpi-card wide">
                             <div className="kpi-title">Saldo KSeF (Wystawione vs. Odebrane)</div>
                             <div className="mini-chart" aria-hidden>
-                                {chartDays.map((d, idx) => (
-                                    <div className="bar-pair" key={idx}>
+                                {CHART_DAYS.map((d) => (
+                                    <div className="bar-pair" key={d.day}>
                                         <div className="bar issued" style={{ height: Math.min(100, d.issued) + '%' }} />
                                         <div className="bar received" style={{ height: Math.min(100, d.received) + '%' }} />
                                     </div>
                                 ))}
                             </div>
                             <div className="chart-legend">
-                                <span className="legend-item"><i className="dot issued" /> Wystawione: {balanceIssued}</span>
-                                <span className="legend-item"><i className="dot received" /> Odebrane: {balanceReceived}</span>
+                                <span className="legend-item"><i className="dot issued" /> Wystawione: {BALANCE_ISSUED}</span>
+                                <span className="legend-item"><i className="dot received" /> Odebrane: {BALANCE_RECEIVED}</span>
                             </div>
                         </div>
                     </section>
@@ -181,7 +153,7 @@ export default function Dashboard() {
                                                 <td>
                                                     {row.grossAmount?.toLocaleString('pl-PL', {
                                                         style: 'currency',
-                                                        currency: row.currency || 'PLN'
+                                                        currency: row.currency || 'PLN',
                                                     }) || '-'}
                                                 </td>
                                                 <td>{row.issueDate || '-'}</td>
@@ -205,7 +177,11 @@ export default function Dashboard() {
                     <section className="future-section">
                         <h2>Szybkie Działania</h2>
                         <div className="future-grid">
-                            <div className="future-card" onClick={() => navigate('/invoices/new')} style={{ cursor: 'pointer' }}>
+                            <div
+                                className="future-card"
+                                onClick={() => navigate('/invoices/new')}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <div className="future-icon">📄</div>
                                 <div className="future-title">Wystaw fakturę</div>
                                 <div className="future-badge">Dostępne</div>

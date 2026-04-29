@@ -1,13 +1,14 @@
-// src/views/issued/IssuedInvoices.tsx
 import { useMemo, useState } from 'react';
-import { useQuery, keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import '../received/ReceivedInvoices.css';
 import '../dashboard/Dashboard.css';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
 import InvoiceFilters from '../../components/filters/InvoiceFilters';
-import { listIssued, syncInvoices, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
+import KsefStatusAlerts from '../../components/invoices/KsefStatusAlerts';
+import InvoicePagination from '../../components/invoices/InvoicePagination';
+import { listIssued, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
 import { useInvoiceFilters } from '../../hooks/useInvoiceFilters';
+import { useSyncInvoices } from '../../hooks/useSyncInvoices';
 import { useAuth } from '../../hooks/useAuth';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
@@ -60,26 +61,11 @@ function loadSentInvoices(): SentInvoiceRecord[] {
     }
 }
 
-function buildPageNumbers(current: number, total: number): (number | 'dots')[] {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    const pages: (number | 'dots')[] = [1];
-    const left = Math.max(2, current - 1);
-    const right = Math.min(total - 1, current + 1);
-    if (left > 2) pages.push('dots');
-    for (let i = left; i <= right; i++) pages.push(i);
-    if (right < total - 1) pages.push('dots');
-    pages.push(total);
-    return pages;
-}
-
 export default function IssuedInvoices() {
     const { isKsefConnected, needsCompanySetup } = useAuth();
-    const navigate = useNavigate();
-    const queryClient = useQueryClient();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
-    const [syncError, setSyncError] = useState<string | null>(null);
 
     const sentInvoices = useMemo(() => loadSentInvoices(), []);
 
@@ -90,20 +76,7 @@ export default function IssuedInvoices() {
         placeholderData: keepPreviousData,
     });
 
-    const syncMutation = useMutation({
-        mutationFn: syncInvoices,
-        onSuccess: (result) => {
-            setSyncError(null);
-            if (result.success) {
-                queryClient.invalidateQueries({ queryKey: ['issuedInvoices'] });
-            } else {
-                setSyncError(result.error ?? 'Błąd synchronizacji');
-            }
-        },
-        onError: (err: Error) => {
-            setSyncError(err.message ?? 'Błąd synchronizacji');
-        },
-    });
+    const { sync, isSyncing, syncError } = useSyncInvoices({ queryKey: ['issuedInvoices'] });
 
     const {
         filters,
@@ -120,7 +93,6 @@ export default function IssuedInvoices() {
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const pageClamped = Math.min(page, totalPages);
     const paged = filteredInvoices.slice((pageClamped - 1) * pageSize, pageClamped * pageSize);
-    const pageNumbers = buildPageNumbers(pageClamped, totalPages);
 
     const errorMessage = error
         ? 'Nie udało się pobrać faktur. Sprawdź, czy serwer backendu jest uruchomiony.'
@@ -128,6 +100,11 @@ export default function IssuedInvoices() {
 
     function findLocalData(invoice: Invoice): SentInvoiceRecord | undefined {
         return sentInvoices.find(s => s.invoiceNumber === invoice.numerFaktury);
+    }
+
+    function canDownloadPdf(invoice: Invoice): boolean {
+        const localData = findLocalData(invoice);
+        return !!(localData?.invoiceHash || invoice.invoiceHash);
     }
 
     async function handleDownloadPdf(invoice: Invoice) {
@@ -199,11 +176,6 @@ export default function IssuedInvoices() {
         }
     }
 
-    function canDownloadPdf(invoice: Invoice): boolean {
-        const localData = findLocalData(invoice);
-        return !!(localData?.invoiceHash || invoice.invoiceHash);
-    }
-
     return (
         <div className="dash-root">
             <SideNav />
@@ -215,34 +187,10 @@ export default function IssuedInvoices() {
                         <p className="subtitle">Lista dokumentów wystawionych w KSeF</p>
                     </header>
 
-                    {needsCompanySetup && (
-                        <div className="alert-box warning">
-                            <span className="alert-icon">⚙️</span>
-                            <div className="alert-content">
-                                <strong>Firma nie jest skonfigurowana</strong>
-                                <p>
-                                    Aby pobierać faktury z KSeF, skonfiguruj dane firmy (NIP + token autoryzacyjny).
-                                    Użyj przycisku „Skonfiguruj firmę" w panelu bocznym.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {!needsCompanySetup && !isKsefConnected && (
-                        <div className="alert-box warning">
-                            <span className="alert-icon">🔌</span>
-                            <div className="alert-content">
-                                <strong>Brak połączenia z KSeF</strong>
-                                <p>
-                                    Połącz się z Krajowym Systemem e-Faktur, aby wyświetlić wystawione faktury.
-                                    Użyj przycisku „Połącz z KSeF" w panelu bocznym lub przejdź do{' '}
-                                    <button onClick={() => navigate('/settings')} className="link-button">
-                                        Ustawień
-                                    </button>.
-                                </p>
-                            </div>
-                        </div>
-                    )}
+                    <KsefStatusAlerts
+                        needsCompanySetup={needsCompanySetup}
+                        isKsefConnected={isKsefConnected}
+                    />
 
                     {syncError && (
                         <div className="alert-box warning">
@@ -264,11 +212,11 @@ export default function IssuedInvoices() {
                                     </span>
                                 )}
                                 <PrimaryButton
-                                    onClick={() => syncMutation.mutate()}
-                                    disabled={!isKsefConnected || syncMutation.isPending}
+                                    onClick={sync}
+                                    disabled={!isKsefConnected || isSyncing}
                                     icon="☁"
                                 >
-                                    {syncMutation.isPending ? 'Synchronizacja...' : 'Synchronizuj z KSeF'}
+                                    {isSyncing ? 'Synchronizacja...' : 'Synchronizuj z KSeF'}
                                 </PrimaryButton>
                             </div>
                         </div>
@@ -388,43 +336,13 @@ export default function IssuedInvoices() {
                             )}
                         </div>
 
-                        {totalPages > 1 && (
-                            <div className="pagination">
-                                <button
-                                    className="pagination-nav"
-                                    disabled={pageClamped <= 1}
-                                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                                >
-                                    ‹ <span>Poprzednia</span>
-                                </button>
-
-                                {pageNumbers.map((p, i) =>
-                                    p === 'dots' ? (
-                                        <span key={`dots-${i}`} className="pagination-dots">…</span>
-                                    ) : (
-                                        <button
-                                            key={p}
-                                            className={`pagination-page ${p === pageClamped ? 'active' : ''}`}
-                                            onClick={() => setPage(p)}
-                                        >
-                                            {p}
-                                        </button>
-                                    )
-                                )}
-
-                                <button
-                                    className="pagination-nav"
-                                    disabled={pageClamped >= totalPages}
-                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                >
-                                    <span>Następna</span> ›
-                                </button>
-
-                                <span className="pagination-info">
-                                    {(pageClamped - 1) * pageSize + 1}–{Math.min(pageClamped * pageSize, total)} z {total}
-                                </span>
-                            </div>
-                        )}
+                        <InvoicePagination
+                            page={pageClamped}
+                            totalPages={totalPages}
+                            total={total}
+                            pageSize={pageSize}
+                            onPageChange={setPage}
+                        />
                     </section>
                 </div>
             </main>

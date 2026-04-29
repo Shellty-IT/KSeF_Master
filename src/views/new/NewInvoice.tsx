@@ -1,7 +1,4 @@
-// FRONTEND: src/views/new/NewInvoice.tsx
-import { useState } from 'react';
 import './NewInvoice.css';
-import '../dashboard/Dashboard.css';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
@@ -12,14 +9,11 @@ import InvoiceLinesTable from './components/InvoiceLinesTable';
 import InvoicePayment from './components/InvoicePayment';
 import InvoicePrintView from './components/InvoicePrintView';
 import { useAuth } from '../../hooks/useAuth';
-import { closeSessionAndGetUpo } from '../../services/ksefApi';
+import { useCloseSession } from '../../hooks/useCloseSession';
 
 export default function NewInvoice() {
     const { isKsefConnected } = useAuth();
-    const [isClosingSession, setIsClosingSession] = useState(false);
-    const [sessionCloseInfo, setSessionCloseInfo] = useState<string | null>(null);
-    // Przycisk pojawia się dopiero po wysłaniu co najmniej jednej faktury
-    const [invoiceSentInSession, setInvoiceSentInSession] = useState(false);
+    const { isClosing, closeInfo, closeSession } = useCloseSession();
 
     const {
         draft,
@@ -29,6 +23,7 @@ export default function NewInvoice() {
         isSending,
         isAuthenticated,
         isImported,
+        invoiceSent,
         totals,
         updateBuyer,
         updateLine,
@@ -40,48 +35,7 @@ export default function NewInvoice() {
         handleSendToKsef,
     } = useNewInvoice();
 
-    const handleSendAndTrack = async () => {
-        await handleSendToKsef();
-        // Po wywołaniu handleSendToKsef, hook ustawia `info` na komunikat z ✅ jeśli sukces.
-        // Używamy małego opóźnienia żeby state zdążył się zaktualizować.
-        setTimeout(() => {
-            setInvoiceSentInSession(true);
-        }, 300);
-    };
-
-    const handleCloseSessionAndUpo = async () => {
-        setIsClosingSession(true);
-        setSessionCloseInfo(null);
-        try {
-            const result = await closeSessionAndGetUpo();
-            if (result.success) {
-                if (result.data?.upoAvailable && result.data?.upoXml) {
-                    // Pobieramy UPO jako plik XML
-                    const blob = new Blob([result.data.upoXml], { type: 'text/xml' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `UPO_${result.data.sessionReferenceNumber ?? 'sesja'}.xml`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    setSessionCloseInfo('✅ Sesja zamknięta. UPO zbiorcze pobrane i zapisane.');
-                } else {
-                    setSessionCloseInfo(`✅ ${result.message ?? 'Sesja zamknięta.'}`);
-                }
-                setInvoiceSentInSession(false);
-            } else {
-                setSessionCloseInfo(`⚠️ ${result.error ?? 'Nie udało się zamknąć sesji.'}`);
-            }
-        } catch {
-            setSessionCloseInfo('⚠️ Błąd połączenia podczas zamykania sesji.');
-        } finally {
-            setIsClosingSession(false);
-        }
-    };
-
-    const showCloseButton = isKsefConnected && invoiceSentInSession;
+    const showCloseButton = isKsefConnected && invoiceSent;
 
     return (
         <div className="dash-root print-hide-nav">
@@ -112,7 +66,7 @@ export default function NewInvoice() {
                                     Podgląd / Drukuj
                                 </PrimaryButton>
                                 <PrimaryButton
-                                    onClick={handleSendAndTrack}
+                                    onClick={handleSendToKsef}
                                     icon="📤"
                                     disabled={isSending || !isAuthenticated}
                                     title={!isAuthenticated ? 'Zaloguj się do KSeF, aby wysłać fakturę' : undefined}
@@ -122,11 +76,11 @@ export default function NewInvoice() {
                                 {showCloseButton && (
                                     <button
                                         className="btn-close-session"
-                                        onClick={handleCloseSessionAndUpo}
-                                        disabled={isClosingSession}
+                                        onClick={closeSession}
+                                        disabled={isClosing}
                                         title="Zamknij sesję interaktywną i pobierz zbiorcze UPO"
                                     >
-                                        {isClosingSession ? '⏳ Zamykanie...' : '🔒 Zakończ sesję i pobierz UPO'}
+                                        {isClosing ? '⏳ Zamykanie...' : '🔒 Zakończ sesję i pobierz UPO'}
                                     </button>
                                 )}
                             </div>
@@ -144,9 +98,9 @@ export default function NewInvoice() {
                             </div>
                         )}
 
-                        {sessionCloseInfo && (
-                            <div className={`info-banner ${sessionCloseInfo.startsWith('✅') ? 'success' : ''}`}>
-                                {sessionCloseInfo}
+                        {closeInfo && (
+                            <div className={`info-banner ${closeInfo.startsWith('✅') ? 'success' : ''}`}>
+                                {closeInfo}
                             </div>
                         )}
 

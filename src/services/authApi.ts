@@ -1,21 +1,6 @@
-// src/services/authApi.ts
-import axios, { AxiosError } from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-
-const authClient = axios.create({
-    baseURL: `${API_BASE_URL}/api/auth`,
-    headers: { 'Content-Type': 'application/json' },
-    timeout: 30000,
-});
-
-authClient.interceptors.request.use((config) => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
+import { AxiosError } from 'axios';
+import { authHttpClient, parseApiError } from './apiClient';
+import { tokenStorage } from './tokenStorage';
 
 export interface RegisterRequest {
     email: string;
@@ -95,7 +80,7 @@ interface ApiResponse<T> {
 
 export async function register(request: RegisterRequest): Promise<{ success: boolean; error?: string; token?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.post<ApiResponse<{ token: string; user: UserInfo }>>('/register', request);
+        const response = await authHttpClient.post<ApiResponse<{ token: string; user: UserInfo }>>('/register', request);
         if (response.data.success && response.data.data) {
             return {
                 success: true,
@@ -105,15 +90,13 @@ export async function register(request: RegisterRequest): Promise<{ success: boo
         }
         return { success: false, error: response.data.error || 'Błąd rejestracji' };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
-            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function loginApp(request: LoginAppRequest): Promise<{ success: boolean; error?: string; token?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.post<ApiResponse<{ token: string; user: UserInfo }>>('/login', request);
+        const response = await authHttpClient.post<ApiResponse<{ token: string; user: UserInfo }>>('/login', request);
         if (response.data.success && response.data.data) {
             return {
                 success: true,
@@ -123,15 +106,13 @@ export async function loginApp(request: LoginAppRequest): Promise<{ success: boo
         }
         return { success: false, error: response.data.error || 'Błąd logowania' };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
-            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function getMe(): Promise<{ success: boolean; error?: string; user?: UserInfo; isKsefConnected?: boolean; needsCompanySetup?: boolean }> {
     try {
-        const response = await authClient.get<ApiResponse<{ user: UserInfo; isKsefConnected: boolean; needsCompanySetup: boolean }>>('/me');
+        const response = await authHttpClient.get<ApiResponse<{ user: UserInfo; isKsefConnected: boolean; needsCompanySetup: boolean }>>('/me');
         if (response.data.success && response.data.data) {
             return {
                 success: true,
@@ -142,20 +123,13 @@ export async function getMe(): Promise<{ success: boolean; error?: string; user?
         }
         return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response) {
-            if (error.response.status === 401) {
-                localStorage.removeItem('authToken');
-                return { success: false, error: 'Sesja wygasła' };
-            }
-            return { success: false, error: error.response.data?.error || 'Błąd połączenia z serwerem' };
-        }
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function setupCompany(request: CompanySetupRequest): Promise<{ success: boolean; error?: string; token?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.post<ApiResponse<{ token?: string; user: UserInfo }>>('/company', request);
+        const response = await authHttpClient.post<ApiResponse<{ token?: string; user: UserInfo }>>('/company', request);
         if (response.data.success && response.data.data) {
             return {
                 success: true,
@@ -165,152 +139,127 @@ export async function setupCompany(request: CompanySetupRequest): Promise<{ succ
         }
         return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
-            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function updateCompanyProfile(request: UpdateCompanyProfileRequest): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.put<ApiResponse<{ user: UserInfo }>>('/company/profile', request);
+        const response = await authHttpClient.put<ApiResponse<{ user: UserInfo }>>('/company/profile', request);
         if (response.data.success && response.data.data) {
             return { success: true, user: response.data.data.user };
         }
         return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
-            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function updateKsefToken(request: UpdateKsefTokenRequest): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.put<ApiResponse<{ user: UserInfo }>>('/company/token', request);
+        const response = await authHttpClient.put<ApiResponse<{ user: UserInfo }>>('/company/token', request);
         if (response.data.success && response.data.data) {
             return { success: true, user: response.data.data.user };
         }
         return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
-            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function updateKsefEnvironment(request: UpdateKsefEnvironmentRequest): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.put<ApiResponse<{ user: UserInfo }>>('/company/environment', request);
+        const response = await authHttpClient.put<ApiResponse<{ user: UserInfo }>>('/company/environment', request);
         if (response.data.success && response.data.data) {
             return { success: true, user: response.data.data.user };
         }
         return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
-            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function uploadCertificate(request: UploadCertificateRequest): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.post<ApiResponse<{ user: UserInfo }>>('/company/certificate', request);
+        const response = await authHttpClient.post<ApiResponse<{ user: UserInfo }>>('/company/certificate', request);
         if (response.data.success && response.data.data) {
             return { success: true, user: response.data.data.user };
         }
         return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
-            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function switchAuthMethod(request: SwitchAuthMethodRequest): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.put<ApiResponse<{ user: UserInfo }>>('/company/auth-method', request);
+        const response = await authHttpClient.put<ApiResponse<{ user: UserInfo }>>('/company/auth-method', request);
         if (response.data.success && response.data.data) {
             return { success: true, user: response.data.data.user };
         }
         return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
-            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function deleteCertificate(): Promise<{ success: boolean; error?: string; user?: UserInfo }> {
     try {
-        const response = await authClient.delete<ApiResponse<{ user: UserInfo }>>('/company/certificate');
+        const response = await authHttpClient.delete<ApiResponse<{ user: UserInfo }>>('/company/certificate');
         if (response.data.success && response.data.data) {
             return { success: true, user: response.data.data.user };
         }
         return { success: false, error: response.data.error };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
-            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function getCertificateInfo(): Promise<{ success: boolean; error?: string; data?: CertificateInfo }> {
     try {
-        const response = await authClient.get<ApiResponse<CertificateInfo>>('/company/certificate/info');
+        const response = await authHttpClient.get<ApiResponse<CertificateInfo>>('/company/certificate/info');
         return {
             success: response.data.success,
             error: response.data.error,
             data: response.data.data
         };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
-            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function connectToKsef(): Promise<{ success: boolean; error?: string; tokenExpired?: boolean; data?: { nip?: string; accessTokenValidUntil?: string; referenceNumber?: string; environment?: string } }> {
     try {
-        const response = await authClient.post<ApiResponse<{ nip?: string; accessTokenValidUntil?: string; referenceNumber?: string; environment?: string }>>('/ksef/connect');
+        const response = await authHttpClient.post<ApiResponse<{ nip?: string; accessTokenValidUntil?: string; referenceNumber?: string; environment?: string }>>('/ksef/connect');
         return {
             success: response.data.success,
             error: response.data.error,
             data: response.data.data
         };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
+        if (error instanceof AxiosError && error.response?.data) {
             return {
                 success: false,
-                error: error.response.data.error || 'Błąd połączenia z serwerem',
+                error: error.response.data.error || parseApiError(error),
                 tokenExpired: error.response.data.tokenExpired
             };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        }
+        return { success: false, error: parseApiError(error) };
     }
 }
 
 export async function disconnectFromKsef(): Promise<{ success: boolean; error?: string }> {
     try {
-        const response = await authClient.post<ApiResponse<null>>('/ksef/disconnect');
+        const response = await authHttpClient.post<ApiResponse<null>>('/ksef/disconnect');
         return {
             success: response.data.success,
             error: response.data.error
         };
     } catch (error) {
-        if (error instanceof AxiosError && error.response?.data)
-            return { success: false, error: error.response.data.error || 'Błąd połączenia z serwerem' };
-        return { success: false, error: 'Błąd połączenia z serwerem' };
+        return { success: false, error: parseApiError(error) };
     }
 }
 
-export function getStoredToken(): string | null {
-    return localStorage.getItem('authToken');
-}
-
-export function setStoredToken(token: string): void {
-    localStorage.setItem('authToken', token);
-}
-
-export function clearStoredToken(): void {
-    localStorage.removeItem('authToken');
-}
+export const getStoredToken = tokenStorage.get;
+export const setStoredToken = tokenStorage.set;
+export const clearStoredToken = tokenStorage.clear;

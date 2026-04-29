@@ -1,5 +1,4 @@
-// src/context/AuthProvider.tsx
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { AuthContext, type AuthState, type AuthContextType } from './AuthContext';
 import * as authApi from '../services/authApi';
 import * as ksefApiModule from '../services/ksefApi';
@@ -21,41 +20,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasCertificate: false,
     });
 
-    const checkExistingSession = useCallback(async () => {
-        const token = authApi.getStoredToken();
-        if (!token) {
-            setState(prev => ({ ...prev, isLoading: false }));
-            return;
-        }
-
-        const meResult = await authApi.getMe();
-        if (!meResult.success || !meResult.user) {
-            authApi.clearStoredToken();
-            setState(prev => ({ ...prev, isLoading: false }));
-            return;
-        }
-
-        const user = meResult.user;
-        const needsSetup = meResult.needsCompanySetup ?? (user.company === null);
-        const isConnected = meResult.isKsefConnected ?? false;
-
-        setState(prev => ({
-            ...prev,
-            isLoading: false,
-            isAppAuthenticated: true,
-            isKsefConnected: isConnected,
-            user,
-            needsCompanySetup: needsSetup,
-            ksefNip: user.company?.nip ?? null,
-            authMethod: user.company?.authMethod ?? 'token',
-            ksefEnvironment: user.company?.ksefEnvironment ?? 'Test',
-            hasCertificate: user.company?.hasCertificate ?? false,
-        }));
-    }, []);
-
     useEffect(() => {
+        async function checkExistingSession() {
+            const token = authApi.getStoredToken();
+            if (!token) {
+                setState(prev => ({ ...prev, isLoading: false }));
+                return;
+            }
+
+            const meResult = await authApi.getMe();
+            if (!meResult.success || !meResult.user) {
+                authApi.clearStoredToken();
+                setState(prev => ({ ...prev, isLoading: false }));
+                return;
+            }
+
+            const user = meResult.user;
+            const needsSetup = meResult.needsCompanySetup ?? (user.company === null);
+            const isConnected = meResult.isKsefConnected ?? false;
+
+            setState(prev => ({
+                ...prev,
+                isLoading: false,
+                isAppAuthenticated: true,
+                isKsefConnected: isConnected,
+                user,
+                needsCompanySetup: needsSetup,
+                ksefNip: user.company?.nip ?? null,
+                authMethod: user.company?.authMethod ?? 'token',
+                ksefEnvironment: user.company?.ksefEnvironment ?? 'Test',
+                hasCertificate: user.company?.hasCertificate ?? false,
+            }));
+        }
+
         checkExistingSession();
-    }, [checkExistingSession]);
+    }, []);
 
     const loginApp = async (email: string, password: string): Promise<boolean> => {
         setState(prev => ({ ...prev, isLoading: true, error: null }));
