@@ -28,7 +28,6 @@ export default function ImportedDrafts() {
                         error={s.error}
                         statusFilter={s.statusFilter}
                         setStatusFilter={s.setStatusFilter}
-                        page={s.page}
                         pageSize={s.pageSize}
                         setPage={s.setPage}
                         setPageSize={s.setPageSize}

@@ -11,7 +11,6 @@ interface Props {
     error: Error | null;
     statusFilter: StatusFilter;
     setStatusFilter: (v: StatusFilter) => void;
-    page: number;
     pageSize: number;
     setPage: (v: number) => void;
     setPageSize: (v: number) => void;
@@ -29,7 +28,7 @@ interface Props {
 export default function DraftsTable({
     drafts, isLoading, isFetching, error,
     statusFilter, setStatusFilter,
-    page, pageSize, setPage, setPageSize,
+    pageSize, setPage, setPageSize,
     total, totalPages, pageClamped,
     isApprovePending, isRejectPending,
     onRefetch, onSelectDraft, onApproveAndEdit, onOpenRejectModal,

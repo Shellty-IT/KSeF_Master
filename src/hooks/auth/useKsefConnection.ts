@@ -1,6 +1,5 @@
 // src/hooks/auth/useKsefConnection.ts
 import type { Dispatch, SetStateAction } from 'react';
-import { AxiosError } from 'axios';
 import * as authApi from '../../services/authApi';
 import type { AuthState } from '../../context/AuthContext';
 

@@ -1,5 +1,4 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthProvider';
 import { useAuth } from './hooks/useAuth';
 import StartView from './views/start/StartView';
 import LoginView from './views/start/LoginView';
