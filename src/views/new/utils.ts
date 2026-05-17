@@ -2,7 +2,8 @@
 import { sanitizeNip } from '../../helpers/nip';
 import { getSeller } from '../../services/settings';
 import type { Party, InvoiceDraft, SentInvoiceRecord, ImportedInvoiceData, VatRate } from './types';
-import { DRAFT_KEY, SELLER_KEY, SENT_INVOICES_KEY, emptyParty, emptyLine } from './constants';
+import { DRAFT_KEY, SELLER_KEY, emptyParty, emptyLine } from './constants';
+import { STORAGE_KEYS } from '../../constants/storage';
 
 export function today(): string {
     return new Date().toISOString().slice(0, 10);
@@ -62,10 +63,10 @@ export function loadDraft(sessionNip?: string | null): InvoiceDraft | null {
 
 export function saveSentInvoice(record: SentInvoiceRecord): void {
     try {
-        const raw = localStorage.getItem(SENT_INVOICES_KEY);
+        const raw = localStorage.getItem(STORAGE_KEYS.sentInvoices);
         const existing: SentInvoiceRecord[] = raw ? JSON.parse(raw) : [];
         existing.unshift(record);
-        localStorage.setItem(SENT_INVOICES_KEY, JSON.stringify(existing.slice(0, 100)));
+        localStorage.setItem(STORAGE_KEYS.sentInvoices, JSON.stringify(existing.slice(0, 100)));
     } catch {
         // fallback
     }
@@ -104,8 +105,8 @@ export function createEmptyDraft(sessionNip?: string | null): InvoiceDraft {
 
 export function loadImportedData(): { draft: InvoiceDraft; draftId: string } | null {
     try {
-        const dataRaw = sessionStorage.getItem('importedInvoiceData');
-        const draftId = sessionStorage.getItem('importedDraftId');
+        const dataRaw = sessionStorage.getItem(STORAGE_KEYS.importedInvoiceData);
+        const draftId = sessionStorage.getItem(STORAGE_KEYS.importedDraftId);
         if (!dataRaw || !draftId) return null;
 
         const data = JSON.parse(dataRaw) as ImportedInvoiceData;
@@ -152,7 +153,7 @@ export function loadImportedData(): { draft: InvoiceDraft; draftId: string } | n
             },
         };
 
-        sessionStorage.removeItem('importedInvoiceData');
+        sessionStorage.removeItem(STORAGE_KEYS.importedInvoiceData);
 
         return { draft, draftId };
     } catch {

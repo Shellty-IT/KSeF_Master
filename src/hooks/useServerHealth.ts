@@ -1,10 +1,10 @@
 // src/hooks/useServerHealth.ts
 import { useState, useEffect, useCallback } from 'react';
+import { API_BASE_URL, SERVER_HEALTH_CONFIG } from '../constants/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-const HEALTH_ENDPOINT = `${API_BASE_URL}/health`;
-const MAX_RETRIES = 15;
-const RETRY_INTERVAL_MS = 2000;
+const HEALTH_ENDPOINT = `${API_BASE_URL}${SERVER_HEALTH_CONFIG.endpoint}`;
+const MAX_RETRIES = SERVER_HEALTH_CONFIG.maxRetries;
+const RETRY_INTERVAL_MS = SERVER_HEALTH_CONFIG.retryIntervalMs;
 
 export type ServerStatus = 'checking' | 'online' | 'offline' | 'error';
 

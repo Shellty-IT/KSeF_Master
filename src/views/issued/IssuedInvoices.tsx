@@ -12,6 +12,7 @@ import { useSyncInvoices } from '../../hooks/useSyncInvoices';
 import { useAuth } from '../../hooks/useAuth';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
+import { STORAGE_KEYS } from '../../constants/storage';
 
 interface SentInvoiceRecord {
     invoiceNumber: string;
@@ -50,11 +51,9 @@ interface SentInvoiceRecord {
     paymentBankAccount?: string;
 }
 
-const SENT_INVOICES_KEY = 'sentInvoices';
-
 function loadSentInvoices(): SentInvoiceRecord[] {
     try {
-        const raw = localStorage.getItem(SENT_INVOICES_KEY);
+        const raw = localStorage.getItem(STORAGE_KEYS.sentInvoices);
         return raw ? JSON.parse(raw) : [];
     } catch {
         return [];

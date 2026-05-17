@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useServerHealth } from '../../hooks/useServerHealth';
+import { SHELLTY_HOMEPAGE_URL } from '../../constants/urls';
 import ServerStartup from '../../components/startup/ServerStartup';
 import './LoginView.css';
 
@@ -146,7 +147,7 @@ export default function LoginView() {
                     <span>
                         © 2026 KSeF Master - by{' '}
                         <a
-                            href="https://shellty-it.github.io/"
+                            href={SHELLTY_HOMEPAGE_URL}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="underline hover:text-themed"

@@ -1,7 +1,6 @@
 import axios, { AxiosError, type AxiosInstance } from 'axios';
 import { tokenStorage } from './tokenStorage';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { API_BASE_URL, HTTP_TIMEOUTS } from '../constants/api';
 
 export { API_BASE_URL };
 
@@ -50,19 +49,19 @@ function createClient(baseURL: string, timeout: number, withRedirect = false): A
 
 export const authHttpClient = createClient(
     `${API_BASE_URL}/api/auth`,
-    30_000,
+    HTTP_TIMEOUTS.default,
     false
 );
 
 export const ksefHttpClient = createClient(
     `${API_BASE_URL}/api/ksef`,
-    120_000,
+    HTTP_TIMEOUTS.ksef,
     true
 );
 
 export const ksefHttpClientLong = createClient(
     `${API_BASE_URL}/api/ksef`,
-    180_000,
+    HTTP_TIMEOUTS.ksefLong,
     true
 );
 

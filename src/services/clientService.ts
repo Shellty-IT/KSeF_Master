@@ -1,4 +1,5 @@
 // src/services/clientService.ts
+import { STORAGE_KEYS } from '../constants/storage';
 
 export interface Client {
     id: number;
@@ -12,12 +13,10 @@ export interface Client {
     updatedAt?: string;
 }
 
-const STORAGE_KEY = 'appClients';
-
 // Pobiera wszystkich klientów
 export function getClients(): Client[] {
     try {
-        const data = localStorage.getItem(STORAGE_KEY);
+        const data = localStorage.getItem(STORAGE_KEYS.clients);
         return data ? JSON.parse(data) : [];
     } catch (error) {
         console.error("Error reading clients from localStorage", error);
@@ -27,7 +26,7 @@ export function getClients(): Client[] {
 
 // Zapisuje wszystkich klientów (nadpisuje całą listę)
 export function saveClients(clients: Client[]): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+    localStorage.setItem(STORAGE_KEYS.clients, JSON.stringify(clients));
 }
 
 // Zapisuje klienta (dodaje nowego lub aktualizuje istniejącego)
@@ -44,7 +43,7 @@ export function saveClient(client: Omit<Client, 'id'> & { id?: number }): Client
                 ...client,
                 updatedAt: now,
             } as Client;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+            localStorage.setItem(STORAGE_KEYS.clients, JSON.stringify(clients));
             return clients[index];
         }
     }
@@ -57,7 +56,7 @@ export function saveClient(client: Omit<Client, 'id'> & { id?: number }): Client
         updatedAt: now,
     };
     clients.push(newClient);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+    localStorage.setItem(STORAGE_KEYS.clients, JSON.stringify(clients));
     return newClient;
 }
 
@@ -79,7 +78,7 @@ export function updateClient(id: number, updates: Partial<Omit<Client, 'id' | 'c
         updatedAt: new Date().toISOString(),
     };
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+    localStorage.setItem(STORAGE_KEYS.clients, JSON.stringify(clients));
     return clients[index];
 }
 
@@ -90,7 +89,7 @@ export function deleteClient(id: number): boolean {
 
     if (filtered.length === clients.length) return false;
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    localStorage.setItem(STORAGE_KEYS.clients, JSON.stringify(filtered));
     return true;
 }
 

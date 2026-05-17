@@ -1,6 +1,7 @@
 // src/components/modal/KsefSetupModal.tsx
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { KSEF_TEST_PORTAL_URL } from '../../constants/urls';
 import './ClientModal.css';
 
 interface KsefSetupModalProps {
@@ -220,7 +221,7 @@ export default function KsefSetupModal({ mode, onClose, onSuccess }: KsefSetupMo
                     }}>
                         <strong>Jak uzyskać token?</strong>
                         <ol style={{ margin: '8px 0 0 16px', padding: 0 }}>
-                            <li>Wejdź na <a href="https://ap-test.ksef.mf.gov.pl/web" target="_blank" rel="noopener" style={{ color: '#60a5fa' }}>ap-test.ksef.mf.gov.pl</a></li>
+                            <li>Wejdź na <a href={KSEF_TEST_PORTAL_URL} target="_blank" rel="noopener" style={{ color: '#60a5fa' }}>ap-test.ksef.mf.gov.pl</a></li>
                             <li>Zaloguj się podając NIP</li>
                             <li>Przejdź do Ustawienia → Tokeny</li>
                             <li>Wygeneruj token i wklej tutaj</li>

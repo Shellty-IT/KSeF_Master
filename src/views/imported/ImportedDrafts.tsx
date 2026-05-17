@@ -7,6 +7,7 @@ import PrimaryButton from '../../components/buttons/PrimaryButton';
 import InvoicePagination from '../../components/invoices/InvoicePagination';
 import { getDrafts, approveDraft, rejectDraft, mapDraftToInvoiceForm } from '../../services/externalDraftsApi';
 import type { ExternalDraft, ExternalDraftStatus } from '../../types/externalDraft';
+import { STORAGE_KEYS } from '../../constants/storage';
 import './ImportedDrafts.css';
 
 type StatusFilter = 'all' | ExternalDraftStatus;
@@ -68,8 +69,8 @@ export default function ImportedDrafts() {
 
     function handleApproveAndEdit(draft: ExternalDraft) {
         const formData = mapDraftToInvoiceForm(draft);
-        sessionStorage.setItem('importedInvoiceData', JSON.stringify(formData));
-        sessionStorage.setItem('importedDraftId', draft.id);
+        sessionStorage.setItem(STORAGE_KEYS.importedInvoiceData, JSON.stringify(formData));
+        sessionStorage.setItem(STORAGE_KEYS.importedDraftId, draft.id);
         navigate('/invoices/new?source=imported');
     }
 

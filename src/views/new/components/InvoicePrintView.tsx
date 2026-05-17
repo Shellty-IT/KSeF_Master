@@ -2,6 +2,7 @@
 import { formatPLN } from '../../../helpers/money';
 import { calcLine } from '../../../helpers/vat';
 import type { InvoiceDraft, InvoiceTotals } from '../types';
+import { APP_PUBLIC_URL } from '../../../constants/urls';
 
 interface Props {
     draft: InvoiceDraft;
@@ -149,7 +150,7 @@ export default function InvoicePrintView({ draft, totals }: Props) {
                 </div>
 
                 <div className="print-footer">
-                    <p>Wytworzona w <a href="https://ksef-master.netlify.app/"><strong>KSeF Master</strong></a></p>
+                    <p>Wytworzona w <a href={APP_PUBLIC_URL}><strong>KSeF Master</strong></a></p>
                     <p className="note">To jest podgląd faktury. Po wysłaniu do KSeF dokument otrzyma oficjalny numer i kod QR.</p>
                 </div>
             </div>

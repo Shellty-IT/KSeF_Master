@@ -1,15 +1,15 @@
-const TOKEN_KEY = 'authToken';
+import { STORAGE_KEYS } from '../constants/storage';
 
 export const tokenStorage = {
     get(): string | null {
-        return localStorage.getItem(TOKEN_KEY);
+        return localStorage.getItem(STORAGE_KEYS.authToken);
     },
 
     set(token: string): void {
-        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.setItem(STORAGE_KEYS.authToken, token);
     },
 
     clear(): void {
-        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(STORAGE_KEYS.authToken);
     },
 } as const;

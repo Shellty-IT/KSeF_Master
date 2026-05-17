@@ -11,6 +11,7 @@ import type { InvoiceDraft, InvoiceLineDraft } from '../types';
 import type { PartyValue } from '../../../components/form/ContractorSelect';
 import { DRAFT_KEY, SELLER_KEY, emptyLine } from '../constants';
 import { addDays, loadDraft, loadImportedData, saveSentInvoice, mapVatRateToKsef, createEmptyDraft } from '../utils';
+import { STORAGE_KEYS } from '../../../constants/storage';
 
 export default function useNewInvoice() {
     const { nip: sessionNip, isAuthenticated } = useAuth();
@@ -119,7 +120,7 @@ export default function useNewInvoice() {
 
     function clearForm() {
         localStorage.removeItem(DRAFT_KEY);
-        sessionStorage.removeItem('importedDraftId');
+        sessionStorage.removeItem(STORAGE_KEYS.importedDraftId);
         setImportedDraftId(null);
         setInvoiceSent(false);
         setDraft(createEmptyDraft(sessionNip));
@@ -237,7 +238,7 @@ export default function useNewInvoice() {
 
             if (importedDraftId) {
                 approveDraft(importedDraftId).catch(() => {});
-                sessionStorage.removeItem('importedDraftId');
+                sessionStorage.removeItem(STORAGE_KEYS.importedDraftId);
                 setImportedDraftId(null);
             }
 
