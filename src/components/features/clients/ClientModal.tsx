@@ -1,9 +1,10 @@
+// src/components/features/clients/ClientModal.tsx
 import { useState, useEffect } from 'react';
 import type { FormEvent, ChangeEvent } from 'react';
-import PrimaryButton from '../buttons/PrimaryButton';
+import PrimaryButton from '../../ui/PrimaryButton';
 import './ClientModal.css';
-import type { Client } from '../../services/clientService';
-import { sanitizeNip } from '../../helpers/nip';
+import type { Client } from '../../../services/clientService';
+import { sanitizeNip } from '../../../helpers/nip';
 
 interface Props {
     isOpen: boolean;

@@ -1,6 +1,6 @@
 // src/views/new/components/InvoicePayment.tsx
-import NumberInput from '../../../components/form/NumberInput';
-import BankAccountInput from '../../../components/form/BankAccountInput';
+import NumberInput from '../../../components/ui/NumberInput';
+import BankAccountInput from '../../../components/ui/BankAccountInput';
 import type { InvoiceDraft } from '../types';
 
 interface Props {

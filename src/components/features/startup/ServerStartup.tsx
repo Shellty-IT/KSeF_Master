@@ -1,4 +1,4 @@
-// src/components/startup/ServerStartup.tsx
+// src/components/features/startup/ServerStartup.tsx
 import './ServerStartup.css';
 
 interface ServerStartupProps {

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import './ClientsView.css';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
-import PrimaryButton from '../../components/buttons/PrimaryButton';
-import BankAccountInput from '../../components/form/BankAccountInput';
+import PrimaryButton from '../../components/ui/PrimaryButton';
+import BankAccountInput from '../../components/ui/BankAccountInput';
 import { getClients, saveClient, deleteClient, type Client } from '../../services/clientService';
 import { isValidNip, sanitizeNip } from '../../helpers/nip';
 

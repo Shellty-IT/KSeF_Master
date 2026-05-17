@@ -1,6 +1,6 @@
 // src/views/settings/tabs/TabPrintPdf.tsx
 import { useState, useEffect } from 'react';
-import PrimaryButton from '../../../components/buttons/PrimaryButton';
+import PrimaryButton from '../../../components/ui/PrimaryButton';
 import { getSettings, saveSettings, type AppSettings } from '../../../services/settings';
 
 export default function TabPrintPdf() {

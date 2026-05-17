@@ -9,7 +9,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useInvoiceTotals } from './useInvoiceTotals';
 import { useInvoiceValidation } from './useInvoiceValidation';
 import type { InvoiceDraft, InvoiceLineDraft } from '../types';
-import type { PartyValue } from '../../../components/form/ContractorSelect';
+import type { PartyValue } from '../../../components/features/clients/ContractorSelect';
 import { DRAFT_KEY, SELLER_KEY, emptyLine } from '../constants';
 import { addDays, loadDraft, loadImportedData, saveSentInvoice, mapVatRateToKsef, createEmptyDraft } from '../utils';
 import { STORAGE_KEYS } from '../../../constants/storage';

@@ -1,8 +1,8 @@
-// src/components/form/ContractorSelect.tsx
+// src/components/features/clients/ContractorSelect.tsx
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { getClients, type Client } from '../../services/clientService';
-import { isValidNip, sanitizeNip } from '../../helpers/nip';
-import BankAccountInput from './BankAccountInput';
+import { getClients, type Client } from '../../../services/clientService';
+import { isValidNip, sanitizeNip } from '../../../helpers/nip';
+import BankAccountInput from '../../ui/BankAccountInput';
 import './ContractorSelect.css';
 
 export type PartyValue = {

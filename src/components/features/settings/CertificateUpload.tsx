@@ -1,7 +1,7 @@
-// src/components/settings/CertificateUpload.tsx
+// src/components/features/settings/CertificateUpload.tsx
 import { useState, type ChangeEvent } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import PrimaryButton from '../buttons/PrimaryButton';
+import { useAuth } from '../../../hooks/useAuth';
+import PrimaryButton from '../../ui/PrimaryButton';
 
 interface CertificateUploadProps {
     onSuccess?: () => void;

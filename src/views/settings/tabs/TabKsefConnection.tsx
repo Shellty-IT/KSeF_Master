@@ -1,8 +1,8 @@
 // src/views/settings/tabs/TabKsefConnection.tsx
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
-import PrimaryButton from '../../../components/buttons/PrimaryButton';
-import CertificateUpload from '../../../components/settings/CertificateUpload';
+import PrimaryButton from '../../../components/ui/PrimaryButton';
+import CertificateUpload from '../../../components/features/settings/CertificateUpload';
 
 export default function TabKsefConnection() {
     const {

@@ -1,6 +1,6 @@
 // src/views/settings/tabs/TabInvoiceDefaults.tsx
 import { useState, useEffect } from 'react';
-import PrimaryButton from '../../../components/buttons/PrimaryButton';
+import PrimaryButton from '../../../components/ui/PrimaryButton';
 import {
     getSettings,
     saveSettings,

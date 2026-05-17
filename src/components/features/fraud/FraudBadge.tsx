@@ -1,7 +1,7 @@
-// src/components/alerts/FraudBadge.tsx
+// src/components/features/fraud/FraudBadge.tsx
 import { useState } from 'react';
-import type { FraudAnalysisResult, AlertLevel } from '../../types/fraud';
-import { dismissAlert, addKnownContractor } from '../../services/fraudDetection';
+import type { FraudAnalysisResult, AlertLevel } from '../../../types/fraud';
+import { dismissAlert, addKnownContractor } from '../../../services/fraudDetection';
 import './FraudBadge.css';
 
 interface FraudBadgeProps {

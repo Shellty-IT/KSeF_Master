@@ -1,5 +1,5 @@
 // src/views/new/components/InvoiceParties.tsx
-import ContractorSelect, { type PartyValue } from '../../../components/form/ContractorSelect';
+import ContractorSelect, { type PartyValue } from '../../../components/features/clients/ContractorSelect';
 import type { InvoiceDraft } from '../types';
 
 interface Props {

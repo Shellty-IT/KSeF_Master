@@ -1,7 +1,7 @@
 // src/views/new/components/InvoiceLinesTable.tsx
-import NumberInput from '../../../components/form/NumberInput';
-import CurrencyInput from '../../../components/form/CurrencyInput';
-import VatSelect from '../../../components/form/VatSelect';
+import NumberInput from '../../../components/ui/NumberInput';
+import CurrencyInput from '../../../components/ui/CurrencyInput';
+import VatSelect from '../../../components/ui/VatSelect';
 import { formatPLN } from '../../../helpers/money';
 import { calcLine } from '../../../helpers/vat';
 import type { InvoiceLineDraft, InvoiceTotals } from '../types';

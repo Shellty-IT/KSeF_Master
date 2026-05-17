@@ -1,4 +1,4 @@
-import { buildPageNumbers } from '../../helpers/pagination';
+import { buildPageNumbers } from '../../../helpers/pagination';
 
 interface InvoicePaginationProps {
     page: number;

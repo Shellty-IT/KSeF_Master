@@ -1,8 +1,8 @@
-// src/components/modal/KsefSetupModal.tsx
+// src/components/features/ksef/KsefSetupModal.tsx
 import { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { KSEF_TEST_PORTAL_URL } from '../../constants/urls';
-import './ClientModal.css';
+import { useAuth } from '../../../hooks/useAuth';
+import { KSEF_TEST_PORTAL_URL } from '../../../constants/urls';
+import '../clients/ClientModal.css';
 
 interface KsefSetupModalProps {
     mode: 'setup' | 'update-token';

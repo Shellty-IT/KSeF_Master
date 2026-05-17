@@ -1,5 +1,5 @@
 import './NewInvoice.css';
-import PrimaryButton from '../../components/buttons/PrimaryButton';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 import useNewInvoice from './hooks/useNewInvoice';

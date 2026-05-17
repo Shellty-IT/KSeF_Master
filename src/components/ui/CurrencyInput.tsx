@@ -1,4 +1,4 @@
-// src/components/form/CurrencyInput.tsx
+// src/components/ui/CurrencyInput.tsx
 import NumberInput from './NumberInput';
 
 interface Props {

@@ -1,6 +1,6 @@
-// src/components/filters/InvoiceFilters.tsx
+// src/components/features/invoices/InvoiceFilters.tsx
 import { useState } from 'react';
-import type { InvoiceFilters as IInvoiceFilters } from '../../types/filters';
+import type { InvoiceFilters as IInvoiceFilters } from '../../../types/filters';
 import './InvoiceFilters.css';
 
 interface InvoiceFiltersProps {

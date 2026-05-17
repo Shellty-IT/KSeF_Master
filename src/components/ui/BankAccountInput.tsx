@@ -1,4 +1,4 @@
-// src/components/form/BankAccountInput.tsx
+// src/components/ui/BankAccountInput.tsx
 import { useState, useEffect } from 'react';
 import './BankAccountInput.css';
 

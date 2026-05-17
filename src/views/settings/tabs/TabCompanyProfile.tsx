@@ -1,9 +1,9 @@
 // src/views/settings/tabs/TabCompanyProfile.tsx
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
-import PrimaryButton from '../../../components/buttons/PrimaryButton';
-import BankAccountInput from '../../../components/form/BankAccountInput';
-import KsefSetupModal from '../../../components/modal/KsefSetupModal';
+import PrimaryButton from '../../../components/ui/PrimaryButton';
+import BankAccountInput from '../../../components/ui/BankAccountInput';
+import KsefSetupModal from '../../../components/features/ksef/KsefSetupModal';
 import { getSeller, saveSeller, type SellerProfile } from '../../../services/settings';
 
 export default function TabCompanyProfile() {

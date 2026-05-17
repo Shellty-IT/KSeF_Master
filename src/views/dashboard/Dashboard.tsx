@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { getInvoices, type InvoiceMetadata } from '../../services/ksefApi';
 import { useAuth } from '../../hooks/useAuth';
-import KsefStatusAlerts from '../../components/invoices/KsefStatusAlerts';
+import KsefStatusAlerts from '../../components/features/ksef/KsefStatusAlerts';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 
