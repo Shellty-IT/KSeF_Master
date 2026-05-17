@@ -8,12 +8,15 @@ public class ApiResponse<T>
     public bool Success { get; init; }
 
     [JsonPropertyName("data")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public T? Data { get; init; }
 
     [JsonPropertyName("message")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Message { get; init; }
 
     [JsonPropertyName("error")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public object? Error { get; init; }
 
     public static ApiResponse<T> Ok(T data, string? message = null) =>
