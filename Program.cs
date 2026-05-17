@@ -17,6 +17,7 @@ var app = builder.Build();
 
 app.InitializeDatabase();
 app.UseSwaggerUI();
+app.UseAppMiddleware();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();

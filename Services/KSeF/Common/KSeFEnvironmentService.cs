@@ -30,12 +30,15 @@ public class KSeFEnvironmentService : IKSeFEnvironmentService
             section = _configuration.GetSection("KSeF:Environments:Test");
         }
 
-        config.ApiBaseUrl = section.GetValue<string>("ApiBaseUrl") 
-                            ?? "https://api-test.ksef.mf.gov.pl/v2/";
-        config.AppUrl = section.GetValue<string>("AppUrl") 
-                        ?? "https://ap-test.ksef.mf.gov.pl";
-        config.QrBaseUrl = section.GetValue<string>("QrBaseUrl") 
-                           ?? "https://qr-test.ksef.mf.gov.pl";
+        config.ApiBaseUrl = section.GetValue<string>("ApiBaseUrl")
+            ?? throw new InvalidOperationException(
+                $"KSeF:Environments:{environment}:ApiBaseUrl is not configured.");
+        config.AppUrl = section.GetValue<string>("AppUrl")
+            ?? throw new InvalidOperationException(
+                $"KSeF:Environments:{environment}:AppUrl is not configured.");
+        config.QrBaseUrl = section.GetValue<string>("QrBaseUrl")
+            ?? throw new InvalidOperationException(
+                $"KSeF:Environments:{environment}:QrBaseUrl is not configured.");
 
         _logger.LogDebug(
             "KSeF environment '{Environment}' config loaded: API={ApiUrl}",

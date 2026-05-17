@@ -8,7 +8,13 @@ namespace KSeF.Backend.Services.Pdf;
 
 public class PdfSectionRenderer
 {
-    private const string AppUrl = "https://ksef-master.netlify.app/";
+    private readonly string _appUrl;
+
+    public PdfSectionRenderer(IConfiguration configuration)
+    {
+        _appUrl = configuration.GetValue<string>("App:Url")
+            ?? throw new InvalidOperationException("App:Url is not configured in appsettings.");
+    }
 
     public void RenderHeader(IContainer container, GeneratePdfRequest request)
     {
@@ -282,7 +288,7 @@ public class PdfSectionRenderer
         {
             row.AutoItem().AlignMiddle().Text("Wytworzona w ").FontSize(7).FontColor(Colors.Grey.Medium);
             row.AutoItem().AlignMiddle()
-                .Hyperlink(AppUrl)
+                .Hyperlink(_appUrl)
                 .Text(" KSeF Master")
                 .FontSize(7)
                 .FontColor(Colors.Blue.Medium)

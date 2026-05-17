@@ -9,10 +9,12 @@ public static class AuthenticationExtensions
 {
     public static WebApplicationBuilder AddAppAuthentication(this WebApplicationBuilder builder)
     {
-        var jwtKeyRaw = builder.Configuration.GetValue<string>("Jwt:Key");
-        var jwtKey = string.IsNullOrWhiteSpace(jwtKeyRaw)
-            ? "FallbackKeyForDev2025!MinLen32Chars!!"
-            : jwtKeyRaw;
+        var jwtKey = builder.Configuration.GetValue<string>("Jwt:Key");
+        if (string.IsNullOrWhiteSpace(jwtKey))
+            throw new InvalidOperationException(
+                "JWT signing key (Jwt:Key) is not configured. " +
+                "Set it via the JWT_KEY environment variable or appsettings.");
+
         var jwtIssuer = builder.Configuration.GetValue<string>("Jwt:Issuer") ?? "KSeFMaster";
         var jwtAudience = builder.Configuration.GetValue<string>("Jwt:Audience") ?? "KSeFMasterApp";
 
@@ -32,7 +34,7 @@ public static class AuthenticationExtensions
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = jwtIssuer,
                     ValidAudience = jwtAudience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!)),
                     ClockSkew = TimeSpan.FromMinutes(2)
                 };
             });
