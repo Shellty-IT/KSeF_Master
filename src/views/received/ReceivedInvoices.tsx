@@ -7,12 +7,12 @@ import InvoiceFilters from '../../components/features/invoices/InvoiceFilters';
 import FraudBadge from '../../components/features/fraud/FraudBadge';
 import KsefStatusAlerts from '../../components/features/ksef/KsefStatusAlerts';
 import InvoicePagination from '../../components/features/invoices/InvoicePagination';
-import { listReceived, downloadInvoicePdf } from '../../services/ksefApi';
+import { listReceived } from '../../services/ksefApi';
 import type { Invoice } from '../../types/ksef';
-import type { GeneratePdfRequest } from '../../types/invoice';
 import { useInvoiceFilters } from '../../hooks/useInvoiceFilters';
 import { useFraudDetection } from '../../hooks/useFraudDetection';
 import { useSyncInvoices } from '../../hooks/useSyncInvoices';
+import { useInvoicePdfDownload } from '../../hooks/useInvoicePdfDownload';
 import { useAuth } from '../../hooks/useAuth';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
@@ -21,7 +21,7 @@ export default function ReceivedInvoices() {
     const { isKsefConnected, needsCompanySetup } = useAuth();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
-    const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
+    const { downloadingPdf, download } = useInvoicePdfDownload();
 
     const query = useQuery<Invoice[], Error>({
         queryKey: ['receivedInvoices'],
@@ -66,15 +66,9 @@ export default function ReceivedInvoices() {
         : null;
 
     async function handleDownloadPdf(invoice: Invoice) {
-        if (!invoice.invoiceHash) {
-            alert('Brak danych do wygenerowania PDF dla tej faktury.');
-            return;
-        }
-
-        setDownloadingPdf(invoice.numerKsef);
-
-        try {
-            const request: GeneratePdfRequest = {
+        await download(invoice.numerKsef, () => {
+            if (!invoice.invoiceHash) return null;
+            return {
                 source: 'local',
                 invoiceNumber: invoice.numerFaktury,
                 issueDate: invoice.dataWystawienia,
@@ -96,13 +90,7 @@ export default function ReceivedInvoices() {
                     gross: invoice.kwotaBrutto,
                 },
             };
-
-            await downloadInvoicePdf(request);
-        } catch (err) {
-            alert(err instanceof Error ? err.message : 'Nie udało się pobrać PDF');
-        } finally {
-            setDownloadingPdf(null);
-        }
+        });
     }
 
     return (

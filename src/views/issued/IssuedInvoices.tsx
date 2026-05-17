@@ -6,30 +6,22 @@ import PrimaryButton from '../../components/ui/PrimaryButton';
 import InvoiceFilters from '../../components/features/invoices/InvoiceFilters';
 import KsefStatusAlerts from '../../components/features/ksef/KsefStatusAlerts';
 import InvoicePagination from '../../components/features/invoices/InvoicePagination';
-import { listIssued, downloadInvoicePdf } from '../../services/ksefApi';
+import { listIssued } from '../../services/ksefApi';
 import type { Invoice } from '../../types/ksef';
-import type { SentInvoiceRecord, GeneratePdfRequest } from '../../types/invoice';
+import type { SentInvoiceRecord } from '../../types/invoice';
 import { useInvoiceFilters } from '../../hooks/useInvoiceFilters';
 import { useSyncInvoices } from '../../hooks/useSyncInvoices';
+import { useInvoicePdfDownload } from '../../hooks/useInvoicePdfDownload';
 import { useAuth } from '../../hooks/useAuth';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
-import { STORAGE_KEYS } from '../../constants/storage';
-
-function loadSentInvoices(): SentInvoiceRecord[] {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEYS.sentInvoices);
-        return raw ? JSON.parse(raw) : [];
-    } catch {
-        return [];
-    }
-}
+import { loadSentInvoices } from '../../utils/sentInvoicesStorage';
 
 export default function IssuedInvoices() {
     const { isKsefConnected, needsCompanySetup } = useAuth();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
-    const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
+    const { downloadingPdf, download } = useInvoicePdfDownload();
 
     const sentInvoices = useMemo(() => loadSentInvoices(), []);
 
@@ -72,13 +64,10 @@ export default function IssuedInvoices() {
     }
 
     async function handleDownloadPdf(invoice: Invoice) {
-        setDownloadingPdf(invoice.numerKsef);
-
-        try {
+        await download(invoice.numerKsef, () => {
             const localData = findLocalData(invoice);
-
             if (localData?.invoiceHash) {
-                const request: GeneratePdfRequest = {
+                return {
                     source: 'local',
                     invoiceNumber: localData.invoiceNumber,
                     issueDate: localData.issueDate,
@@ -105,9 +94,9 @@ export default function IssuedInvoices() {
                         bankAccount: localData.paymentBankAccount,
                     },
                 };
-                await downloadInvoicePdf(request);
-            } else if (invoice.invoiceHash) {
-                const request: GeneratePdfRequest = {
+            }
+            if (invoice.invoiceHash) {
+                return {
                     source: 'local',
                     invoiceNumber: invoice.numerFaktury,
                     issueDate: invoice.dataWystawienia,
@@ -129,15 +118,9 @@ export default function IssuedInvoices() {
                         gross: invoice.kwotaBrutto,
                     },
                 };
-                await downloadInvoicePdf(request);
-            } else {
-                alert('Brak danych do wygenerowania PDF dla tej faktury.');
             }
-        } catch (err) {
-            alert(err instanceof Error ? err.message : 'Nie udało się pobrać PDF');
-        } finally {
-            setDownloadingPdf(null);
-        }
+            return null;
+        });
     }
 
     return (
