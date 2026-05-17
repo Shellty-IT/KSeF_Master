@@ -1,6 +1,11 @@
 import { AxiosError } from 'axios';
-import { ksefHttpClient, ksefHttpClientLong, API_BASE_URL, parseApiError } from './apiClient';
+import { ksefHttpClient, ksefHttpClientLong, API_BASE_URL } from './apiClient';
 import { tokenStorage } from './tokenStorage';
+import type { Invoice, UpoStatus, ListInvoicesParams } from '../types/ksef';
+import type { CreateInvoiceRequest, GeneratePdfRequest } from '../types/invoice';
+
+export type { Invoice, UpoStatus, ListInvoicesParams };
+export type { CreateInvoiceRequest, GeneratePdfRequest };
 
 export interface LoginRequest {
     nip: string;
@@ -87,40 +92,6 @@ export interface OpenSessionResponse {
     data?: {
         sessionReferenceNumber: string;
         validUntil: string;
-    };
-}
-
-export interface CreateInvoiceRequest {
-    invoiceNumber: string;
-    issueDate: string;
-    saleDate: string;
-    seller: {
-        nip: string;
-        name: string;
-        countryCode?: string;
-        addressLine1: string;
-        addressLine2?: string;
-    };
-    buyer: {
-        nip: string;
-        name: string;
-        countryCode?: string;
-        addressLine1: string;
-        addressLine2?: string;
-    };
-    items: {
-        name: string;
-        unit: string;
-        quantity: number;
-        unitPriceNet: number;
-        vatRate: string;
-    }[];
-    currency?: string;
-    issuePlace?: string;
-    payment?: {
-        method: string;
-        dueDate?: string;
-        bankAccount?: string;
     };
 }
 
@@ -294,31 +265,6 @@ export async function sendInvoice(invoice: CreateInvoiceRequest): Promise<SendIn
     }
 }
 
-export type UpoStatus = 'accepted' | 'pending' | 'rejected';
-
-export interface Invoice {
-    numerKsef: string;
-    numerFaktury: string;
-    nazwaKontrahenta?: string;
-    nipKontrahenta: string;
-    kwotaBrutto: number;
-    dataWystawienia: string;
-    status: UpoStatus;
-    invoiceHash?: string;
-    kwotaNetto?: number;
-    kwotaVat?: number;
-    nazwaSprzedawcy?: string;
-    nipSprzedawcy?: string;
-}
-
-export interface ListInvoicesParams {
-    page?: number;
-    pageSize?: number;
-    nip?: string;
-    status?: UpoStatus | '';
-    date?: { from?: string; to?: string };
-}
-
 export async function listIssued(): Promise<Invoice[]> {
     const response = await getCachedInvoices();
     if (!response.success || !response.data) return [];
@@ -384,48 +330,6 @@ export async function listContractors(): Promise<Contractor[]> {
 
 export async function upsertContractor(): Promise<never> {
     throw new Error('Not implemented');
-}
-
-export interface GeneratePdfRequest {
-    source: 'local' | 'ksef';
-    ksefNumber?: string;
-    invoiceHash?: string;
-    invoiceNumber?: string;
-    issueDate?: string;
-    saleDate?: string;
-    issuePlace?: string;
-    seller?: {
-        nip: string;
-        name: string;
-        address: string;
-        bankAccount?: string;
-    };
-    buyer?: {
-        nip: string;
-        name: string;
-        address: string;
-    };
-    items?: {
-        name: string;
-        unit: string;
-        quantity: number;
-        unitPriceNet: number;
-        vatRate: string;
-        netValue: number;
-        vatValue: number;
-        grossValue: number;
-    }[];
-    totals?: {
-        net: number;
-        vat: number;
-        gross: number;
-        perRate?: Record<string, { net: number; vat: number; gross: number }>;
-    };
-    payment?: {
-        method: string;
-        dueDate?: string;
-        bankAccount?: string;
-    };
 }
 
 export async function downloadInvoicePdf(request: GeneratePdfRequest): Promise<void> {

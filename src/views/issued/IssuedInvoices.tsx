@@ -6,50 +6,15 @@ import PrimaryButton from '../../components/buttons/PrimaryButton';
 import InvoiceFilters from '../../components/filters/InvoiceFilters';
 import KsefStatusAlerts from '../../components/invoices/KsefStatusAlerts';
 import InvoicePagination from '../../components/invoices/InvoicePagination';
-import { listIssued, downloadInvoicePdf, type Invoice, type GeneratePdfRequest } from '../../services/ksefApi';
+import { listIssued, downloadInvoicePdf } from '../../services/ksefApi';
+import type { Invoice } from '../../types/ksef';
+import type { SentInvoiceRecord, GeneratePdfRequest } from '../../types/invoice';
 import { useInvoiceFilters } from '../../hooks/useInvoiceFilters';
 import { useSyncInvoices } from '../../hooks/useSyncInvoices';
 import { useAuth } from '../../hooks/useAuth';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 import { STORAGE_KEYS } from '../../constants/storage';
-
-interface SentInvoiceRecord {
-    invoiceNumber: string;
-    elementReferenceNumber: string;
-    sentAt: string;
-    sellerNip: string;
-    buyerNip: string;
-    buyerName: string;
-    grossAmount: number;
-    invoiceHash?: string;
-    issueDate?: string;
-    saleDate?: string;
-    issuePlace?: string;
-    sellerName?: string;
-    sellerAddress?: string;
-    sellerBankAccount?: string;
-    buyerAddress?: string;
-    items?: {
-        name: string;
-        unit: string;
-        quantity: number;
-        unitPriceNet: number;
-        vatRate: string;
-        netValue: number;
-        vatValue: number;
-        grossValue: number;
-    }[];
-    totals?: {
-        net: number;
-        vat: number;
-        gross: number;
-        perRate?: Record<string, { net: number; vat: number; gross: number }>;
-    };
-    paymentMethod?: string;
-    paymentDueDate?: string;
-    paymentBankAccount?: string;
-}
 
 function loadSentInvoices(): SentInvoiceRecord[] {
     try {

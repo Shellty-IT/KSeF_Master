@@ -1,6 +1,9 @@
 import { AxiosError } from 'axios';
 import { authHttpClient, parseApiError } from './apiClient';
 import { tokenStorage } from './tokenStorage';
+import type { UserInfo, CompanyInfo, CertificateInfo } from '../types/auth';
+
+export type { UserInfo, CompanyInfo, CertificateInfo };
 
 export interface RegisterRequest {
     email: string;
@@ -41,34 +44,6 @@ export interface UploadCertificateRequest {
 
 export interface SwitchAuthMethodRequest {
     authMethod: 'token' | 'certificate';
-}
-
-export interface CompanyInfo {
-    id: number;
-    companyName: string;
-    nip: string;
-    isActive: boolean;
-    hasKsefToken: boolean;
-    authMethod: 'token' | 'certificate';
-    ksefEnvironment: string;
-    hasCertificate: boolean;
-}
-
-export interface UserInfo {
-    id: number;
-    email: string;
-    name: string;
-    company: CompanyInfo | null;
-}
-
-export interface CertificateInfo {
-    hasCertificate: boolean;
-    hasPrivateKey: boolean;
-    isPasswordProtected: boolean;
-    uploadedAt?: string;
-    subjectName?: string;
-    notBefore?: string;
-    notAfter?: string;
 }
 
 interface ApiResponse<T> {

@@ -1,7 +1,9 @@
 // src/views/new/types.ts
 import type { VatRate } from '../../helpers/vat';
+import type { SentInvoiceRecord } from '../../types/invoice';
 
 export type { VatRate };
+export type { SentInvoiceRecord };
 
 export interface InvoiceLineDraft {
     name: string;
@@ -35,43 +37,6 @@ export interface InvoiceDraft {
         dueDate: string;
         bankAccount?: string;
     };
-}
-
-export interface SentInvoiceRecord {
-    invoiceNumber: string;
-    elementReferenceNumber: string;
-    sentAt: string;
-    sellerNip: string;
-    buyerNip: string;
-    buyerName: string;
-    grossAmount: number;
-    invoiceHash?: string;
-    issueDate?: string;
-    saleDate?: string;
-    issuePlace?: string;
-    sellerName?: string;
-    sellerAddress?: string;
-    sellerBankAccount?: string;
-    buyerAddress?: string;
-    items?: {
-        name: string;
-        unit: string;
-        quantity: number;
-        unitPriceNet: number;
-        vatRate: string;
-        netValue: number;
-        vatValue: number;
-        grossValue: number;
-    }[];
-    totals?: {
-        net: number;
-        vat: number;
-        gross: number;
-        perRate?: Record<string, { net: number; vat: number; gross: number }>;
-    };
-    paymentMethod?: string;
-    paymentDueDate?: string;
-    paymentBankAccount?: string;
 }
 
 export interface ImportedInvoiceData {

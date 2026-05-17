@@ -1,6 +1,6 @@
 // src/hooks/useInvoiceFilters.ts
 import { useState, useMemo, useCallback } from 'react';
-import type { Invoice } from '../services/ksefApi';
+import type { Invoice } from '../types/ksef';
 import type { InvoiceFilters, SelectionState } from '../types/filters';
 import { defaultFilters } from '../types/filters';
 

@@ -1,6 +1,6 @@
 // src/context/AuthContext.tsx
 import { createContext } from 'react';
-import type { UserInfo, CertificateInfo } from '../services/authApi';
+import type { UserInfo, CertificateInfo } from '../types/auth';
 
 export interface AuthState {
     isAppAuthenticated: boolean;
