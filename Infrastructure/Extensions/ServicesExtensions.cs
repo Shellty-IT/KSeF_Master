@@ -73,6 +73,7 @@ public static class ServicesExtensions
     private static void RegisterKSeFInvoiceServices(IServiceCollection services)
     {
         services.AddScoped<IKSeFInvoiceQueryService, KSeFInvoiceQueryService>();
+        services.AddScoped<IKSeFInvoiceSyncService, KSeFInvoiceSyncService>();
         services.AddScoped<IKSeFInvoiceDetailsService, KSeFInvoiceDetailsService>();
         services.AddScoped<IKSeFInvoiceStatsService, KSeFInvoiceStatsService>();
         services.AddScoped<IKSeFOnlineSessionService, KSeFOnlineSessionService>();

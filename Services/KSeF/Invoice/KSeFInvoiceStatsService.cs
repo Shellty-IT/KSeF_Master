@@ -52,9 +52,8 @@ public class KSeFInvoiceStatsService : IKSeFInvoiceStatsService
 
         try
         {
-            var httpClient = new HttpClient();
-            issued = await _queryService.QueryInvoicesAsync(httpClient, issuedRequest, cancellationToken);
-            received = await _queryService.QueryInvoicesAsync(httpClient, receivedRequest, cancellationToken);
+            issued = await _queryService.QueryInvoicesAsync(issuedRequest, cancellationToken);
+            received = await _queryService.QueryInvoicesAsync(receivedRequest, cancellationToken);
         }
         catch (Exception ex)
         {

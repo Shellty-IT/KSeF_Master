@@ -10,7 +10,8 @@ public static class HttpClientExtensions
     {
         var defaultEnv = builder.Configuration.GetValue<string>("KSeF:DefaultEnvironment") ?? "Test";
         var ksefBaseUrl = builder.Configuration.GetValue<string>($"KSeF:Environments:{defaultEnv}:ApiBaseUrl")
-                          ?? "https://api-test.ksef.mf.gov.pl/v2/";
+            ?? throw new InvalidOperationException(
+                $"KSeF:Environments:{defaultEnv}:ApiBaseUrl is not configured.");
         var timeoutSeconds = builder.Configuration.GetValue<int>("KSeF:TimeoutSeconds", 60);
 
         builder.Services.AddTransient<KSeFHttpLoggingHandler>();
