@@ -1,0 +1,42 @@
+version: 2
+
+updates:
+  # Frontend — npm
+  - package-ecosystem: npm
+    directory: /ksef_master_frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Warsaw
+    open-pull-requests-limit: 5
+    groups:
+      dev-tooling:
+        patterns: ['vite*', '@vitejs/*', 'vitest*', '@vitest/*', 'eslint*', 'typescript*', 'globals']
+      react:
+        patterns: ['react*', '@types/react*']
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-patch']
+
+  # Backend — NuGet
+  - package-ecosystem: nuget
+    directory: /ksef_master_backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Warsaw
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: 'Microsoft.*'
+        update-types: ['version-update:semver-major']
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      time: '06:00'
+      timezone: Europe/Warsaw
+    open-pull-requests-limit: 3
