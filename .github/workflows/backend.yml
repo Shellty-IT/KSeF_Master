@@ -2,16 +2,9 @@ name: Backend CI
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'ksef_master_backend/**'
-      - '.github/workflows/backend.yml'
+    branches: ['**']
   pull_request:
     branches: [main]
-    paths:
-      - 'ksef_master_backend/**'
-      - '.github/workflows/backend.yml'
-  workflow_dispatch:
 
 concurrency:
   group: backend-${{ github.ref }}
@@ -29,76 +22,104 @@ env:
   CONFIGURATION: Release
 
 jobs:
-  build-and-test:
-    name: Build & Test
+  build:
+    name: Build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Cache NuGet packages
+      - name: Cache NuGet
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('ksef_master_backend/**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
 
-      - name: Restore dependencies
+      - name: Restore
         run: dotnet restore
 
       - name: Build (${{ env.CONFIGURATION }})
         run: dotnet build --no-restore --configuration ${{ env.CONFIGURATION }} -warnaserror
 
-      - name: Run tests
-        run: |
-          if ls **/*Tests.csproj **/*Test.csproj 1>/dev/null 2>&1; then
-            dotnet test --no-build --configuration ${{ env.CONFIGURATION }} \
-              --logger "trx;LogFileName=test-results.trx" \
-              --collect:"XPlat Code Coverage" \
-              --results-directory ./TestResults
-          else
-            echo "No test projects found — skipping dotnet test."
-          fi
-
-      - name: Upload test results
-        if: always() && hashFiles('ksef_master_backend/TestResults/**') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-test-results-${{ github.sha }}
-          path: ksef_master_backend/TestResults
-          retention-days: 7
-
-  publish:
-    name: Publish
-    needs: build-and-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  test:
+    name: Unit & integration tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: .
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Cache NuGet packages
+      - name: Cache NuGet
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('ksef_master_backend/**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
 
-      - name: Publish (${{ env.CONFIGURATION }})
+      - name: Restore solution
+        run: dotnet restore KSeF_Master.slnx
+
+      - name: Build solution (${{ env.CONFIGURATION }})
+        run: dotnet build KSeF_Master.slnx --no-restore --configuration ${{ env.CONFIGURATION }}
+
+      - name: Run tests
+        run: |
+          dotnet test KSeF_Master.slnx \
+            --no-build \
+            --configuration ${{ env.CONFIGURATION }} \
+            --logger "trx;LogFileName=results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            --verbosity normal
+
+      - name: Publish test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Backend test results
+          path: TestResults/*.trx
+          reporter: dotnet-trx
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-${{ github.sha }}
+          path: TestResults/**/coverage.cobertura.xml
+          retention-days: 14
+
+  publish:
+    name: Publish artifact
+    needs: [build, test]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Publish
         run: dotnet publish --configuration ${{ env.CONFIGURATION }} --output ./publish /p:UseAppHost=false
 
       - name: Upload publish artifact
@@ -109,21 +130,19 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  security-audit:
-    name: Security audit
+  audit:
+    name: Vulnerable packages
     runs-on: ubuntu-latest
     timeout-minutes: 10
     continue-on-error: true
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
+      - name: Restore
         run: dotnet restore
 
       - name: List vulnerable packages

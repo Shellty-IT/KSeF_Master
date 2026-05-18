@@ -2,16 +2,9 @@ name: Frontend CI
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'ksef_master_frontend/**'
-      - '.github/workflows/frontend.yml'
+    branches: ['**']
   pull_request:
     branches: [main]
-    paths:
-      - 'ksef_master_frontend/**'
-      - '.github/workflows/frontend.yml'
-  workflow_dispatch:
 
 concurrency:
   group: frontend-${{ github.ref }}
@@ -27,15 +20,13 @@ env:
 
 jobs:
   lint:
-    name: Lint
+    name: Lint & type-check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -44,40 +35,20 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Run ESLint
+      - name: ESLint
         run: npm run lint
 
-  typecheck:
-    name: Type-check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: ksef_master_frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-
-      - name: TypeScript compile check
+      - name: TypeScript type-check
         run: npx tsc --noEmit
 
   test:
-    name: Test
+    name: Unit tests + coverage
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -86,25 +57,26 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Run tests (skipped if no test script defined)
-        run: |
-          if node -e "process.exit(require('./package.json').scripts.test ? 0 : 1)"; then
-            npm test -- --run
-          else
-            echo "No test script defined in package.json — skipping."
-          fi
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-${{ github.sha }}
+          path: ksef_master_frontend/coverage
+          retention-days: 14
 
   build:
-    name: Build
-    needs: [lint, typecheck, test]
+    name: Production build
+    needs: [lint, test]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -113,14 +85,34 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Build production bundle
+      - name: Build
         run: npm run build
 
       - name: Upload build artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist-${{ github.sha }}
           path: ksef_master_frontend/dist
           retention-days: 7
           if-no-files-found: error
+
+  audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ksef_master_frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: npm audit
+        run: npm audit --audit-level=high
