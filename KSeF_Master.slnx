@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/ksef_master_backend/">
+    <Project Path="ksef_master_backend/KSeF_Backend.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/KSeF_Backend.Tests/KSeF_Backend.Tests.csproj" />
+  </Folder>
+</Solution>
