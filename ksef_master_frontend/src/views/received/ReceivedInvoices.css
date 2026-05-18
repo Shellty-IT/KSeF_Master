@@ -1,0 +1,349 @@
+/* src/views/received/ReceivedInvoices.css */
+
+.alert-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 12px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+.alert-summary-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.alert-summary-text {
+    font-size: 14px;
+    color: #fca5a5;
+    line-height: 1.4;
+}
+
+.alert-count {
+    font-weight: 600;
+}
+
+.alert-count.high {
+    color: #ef4444;
+}
+
+.alert-count.medium {
+    color: #f59e0b;
+}
+
+.selection-count {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+    padding: 6px 14px;
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.table-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    gap: 16px;
+}
+
+.page-size-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.page-size-select {
+    background: #0f141b;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.page-size-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.page-size-select:hover {
+    border-color: #2e3a4a;
+}
+
+.results-count {
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.checkbox-col {
+    width: 44px;
+    text-align: center;
+}
+
+.checkbox-col input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+.alert-col {
+    width: 80px;
+    text-align: center;
+}
+
+.ksef-number {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(34, 211, 238, 0.07);
+    padding: 3px 7px;
+    border-radius: 4px;
+    word-break: break-all;
+    display: inline-block;
+    max-width: 220px;
+    line-height: 1.4;
+    letter-spacing: 0.2px;
+}
+
+.contractor-name {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.amount-cell {
+    font-weight: 600;
+    white-space: nowrap;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+}
+
+.row-selected {
+    background: rgba(34, 211, 238, 0.05) !important;
+}
+
+.row-selected td:first-child {
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.row-alert-high {
+    background: rgba(239, 68, 68, 0.05) !important;
+}
+
+.row-alert-high td:first-child {
+    box-shadow: inset 3px 0 0 var(--danger);
+}
+
+.row-alert-medium {
+    background: rgba(245, 158, 11, 0.05) !important;
+}
+
+.row-alert-medium td:first-child {
+    box-shadow: inset 3px 0 0 var(--warning);
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 20px 0 8px;
+    flex-wrap: wrap;
+}
+
+.pagination-nav {
+    background: #0f141b;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.pagination-nav:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--text);
+    background: rgba(34, 211, 238, 0.05);
+}
+
+.pagination-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.pagination-page {
+    min-width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--muted);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.pagination-page:hover {
+    background: rgba(34, 211, 238, 0.08);
+    color: var(--text);
+}
+
+.pagination-page.active {
+    background: var(--accent);
+    color: #001018;
+    font-weight: 700;
+    cursor: default;
+}
+
+.pagination-dots {
+    color: var(--muted);
+    padding: 0 2px;
+    font-size: 14px;
+    user-select: none;
+    pointer-events: none;
+}
+
+.pagination-info {
+    margin-left: 16px;
+    color: var(--muted);
+    font-size: 13px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 16px;
+}
+
+.loading-spinner::before {
+    content: '';
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+.loading-spinner-text {
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 20px;
+    gap: 12px;
+    color: var(--muted);
+}
+
+.empty-state-icon {
+    font-size: 36px;
+    opacity: 0.5;
+}
+
+.empty-state-text {
+    font-size: 14px;
+}
+
+@media (max-width: 900px) {
+    .table-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .ksef-number {
+        max-width: 130px;
+        font-size: 10px;
+    }
+
+    .contractor-name {
+        max-width: 120px;
+    }
+
+    .pagination {
+        gap: 2px;
+    }
+
+    .pagination-nav {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .pagination-page {
+        min-width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+
+    .pagination-info {
+        margin-left: 0;
+        margin-top: 8px;
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 600px) {
+    .alert-summary {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .pagination-nav span {
+        display: none;
+    }
+}

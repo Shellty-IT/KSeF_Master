@@ -1,0 +1,141 @@
+/* src/views/reports/Reports.css */
+
+/* Filtry */
+.reports-filters {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.reports-filters label {
+    min-width: 120px;
+}
+
+/* KPI Grid */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.kpi-card {
+    text-align: center;
+    padding: 24px 16px !important;
+}
+
+.kpi-title {
+    font-size: 13px;
+    color: var(--muted, #a4a9b6);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text, #e6e9ef);
+    font-family: 'Monaco', 'Consolas', monospace;
+}
+
+/* Reports Grid */
+.reports-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.reports-grid .card h3 {
+    margin: 0 0 16px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text, #e6e9ef);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border, #1f2733);
+}
+
+/* Type badge */
+.type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.type-badge.issued {
+    background: rgba(0, 224, 150, 0.15);
+    color: #00e096;
+}
+
+.type-badge.received {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+/* Info banner */
+.info-banner {
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+    color: #93c5fd;
+    font-size: 14px;
+}
+
+/* Text align */
+.text-right {
+    text-align: right;
+}
+
+/* Responsywność */
+@media (max-width: 1200px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .reports-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .reports-filters {
+        flex-direction: column;
+    }
+
+    .reports-filters label {
+        width: 100%;
+    }
+
+    .kpi-value {
+        font-size: 24px;
+    }
+}
+
+/* Print styles */
+@media print {
+    .ops-actions {
+        display: none !important;
+    }
+
+    .kpi-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .kpi-card {
+        border: 1px solid #ccc !important;
+        background: #f9f9f9 !important;
+    }
+
+    .reports-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}

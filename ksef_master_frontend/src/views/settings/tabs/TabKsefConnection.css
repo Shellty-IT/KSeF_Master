@@ -1,0 +1,192 @@
+/* src/views/settings/tabs/TabKsefConnection.css */
+
+/* ── Card header row ── */
+.ksef-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.ksef-card-header--editing {
+    margin-bottom: 20px;
+}
+
+.ksef-card-title {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+/* ── Meta info rows (label + value pairs) ── */
+.ksef-meta-row {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.ksef-meta-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ksef-meta-value {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.ksef-meta-value--mono {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* ── Action rows (Save / Cancel buttons) ── */
+.ksef-action-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+/* ── Shared button modifiers ── */
+.btn-save {
+    background: var(--accent);
+    color: #001018;
+    border: none;
+    font-weight: 700;
+}
+
+.btn-disconnect {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* ── Environment badge ── */
+.env-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+}
+
+.env-badge--production {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+}
+
+.env-badge--test {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+}
+
+/* ── Connection status values ── */
+.ksef-status-value {
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.ksef-status-value--connected {
+    color: var(--success);
+}
+
+.ksef-status-value--disconnected {
+    color: var(--danger);
+}
+
+.ksef-method-value {
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* ── Connect error box ── */
+.ksef-connect-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 12px;
+    color: #fca5a5;
+    font-size: 14px;
+    margin-bottom: 16px;
+    margin-top: 8px;
+}
+
+/* ── Connect actions ── */
+.ksef-connect-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* ── Auth method / token sections ── */
+.ksef-method-extra {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.ksef-token-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.ksef-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 12px;
+}
+
+.ksef-token-header .ksef-section-title {
+    margin: 0;
+}
+
+/* ── Setup form ── */
+.ksef-setup-hint {
+    margin-bottom: 20px;
+}
+
+.ksef-cert-hint {
+    margin-bottom: 16px;
+    font-size: 13px;
+}
+
+.ksef-env-selector {
+    margin-top: 16px;
+}
+
+.ksef-env-description {
+    margin: 0;
+}
+
+.ksef-setup-submit {
+    margin-top: 4px;
+}
+
+/* ── Edit label spacing ── */
+.ksef-edit-label {
+    margin-top: 16px;
+}
+
+/* ── Monospace input ── */
+.input-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* ── Danger description text ── */
+.auth-method-description--danger {
+    color: #fca5a5;
+}

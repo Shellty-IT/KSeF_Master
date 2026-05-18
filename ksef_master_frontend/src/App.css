@@ -1,0 +1,26 @@
+
+html, body, #root {
+    height: 100%;
+    margin: 0;
+}
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+
+
+:root { --sidenav-w: 260px; }
+
+.dash-root {
+    display: grid;
+    grid-template-columns: var(--sidenav-w) 1fr;
+    min-height: 100dvh; /* lepiej na mobile niż 100vh */
+}
+
+
+.dash-main { min-width: 0; }
+
+
+@media (max-width: 1100px) {
+    :root { --sidenav-w: 72px; }
+}
