@@ -15,7 +15,7 @@
     "start:server": "node dist/index.js"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.62.7",
+    "@tanstack/react-query": "^5.100.10",
     "axios": "^1.12.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
