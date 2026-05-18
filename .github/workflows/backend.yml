@@ -50,6 +50,10 @@ jobs:
     name: Unit & integration tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      checks: write        # required by dorny/test-reporter to create check runs
+      pull-requests: write # required to annotate PRs with test results
+      contents: read
     defaults:
       run:
         working-directory: .
