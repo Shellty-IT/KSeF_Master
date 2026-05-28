@@ -35,6 +35,10 @@ public class ExternalDraftValidator
         {
             errors.Add("Wymagana minimum 1 pozycja");
         }
+        else if (request.Items.Count > 500)
+        {
+            errors.Add("Oferta może zawierać maksymalnie 500 pozycji");
+        }
         else
         {
             for (var i = 0; i < request.Items.Count; i++)

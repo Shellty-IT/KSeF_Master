@@ -76,22 +76,28 @@ public class ImportController : BaseApiController
         if (validationErrors.Count > 0)
             return BadRequest(new { success = false, message = string.Join("; ", validationErrors) });
 
-        var existing = await _draftService.GetBySmartQuoteIdAsync(request.SmartQuoteId);
-        if (existing != null)
-            return Conflict(new { success = false, draftId = existing.Id, message = "Szkic z tym smartQuoteId już istnieje" });
-
-        var draft = await _draftService.ImportAsync(request);
-
-        _logger.LogInformation(
-            "Draft created: {DraftId} for SmartQuoteId: {SmartQuoteId}",
-            draft.Id, draft.SmartQuoteId);
-
-        return StatusCode(201, new
+        // Optimistic path: no pre-check. Let the DB unique index catch true duplicates.
+        // DuplicateSmartQuoteIdException is thrown when SaveChanges hits the unique constraint
+        // (fixes race condition where two simultaneous requests both pass a pre-check).
+        try
         {
-            success = true,
-            draftId = draft.Id,
-            message = "Szkic faktury przyjęty do poczekalni"
-        });
+            var draft = await _draftService.ImportAsync(request);
+
+            _logger.LogInformation(
+                "Draft created: {DraftId} for SmartQuoteId: {SmartQuoteId}",
+                draft.Id, draft.SmartQuoteId);
+
+            return StatusCode(201, new
+            {
+                success = true,
+                draftId = draft.Id,
+                message = "Szkic faktury przyjęty do poczekalni"
+            });
+        }
+        catch (DuplicateSmartQuoteIdException ex)
+        {
+            return Conflict(new { success = false, draftId = ex.ExistingDraftId, message = "Szkic z tym smartQuoteId już istnieje" });
+        }
     }
 
     [HttpGet("drafts")]

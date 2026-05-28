@@ -1,13 +1,22 @@
 // Services/External/ExternalDraftService.cs
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using KSeF.Backend.Models;
 using KSeF.Backend.Models.Data;
 using KSeF.Backend.Models.Requests;
 using KSeF.Backend.Services.Interfaces.External;
 
 namespace KSeF.Backend.Services.External;
+
+public class DuplicateSmartQuoteIdException : Exception
+{
+    public string ExistingDraftId { get; }
+    public DuplicateSmartQuoteIdException(string existingDraftId)
+        : base("A draft with this SmartQuote ID already exists") => ExistingDraftId = existingDraftId;
+}
 
 public class ExternalDraftService : IExternalDraftService
 {
@@ -101,7 +110,23 @@ public class ExternalDraftService : IExternalDraftService
         };
 
         _db.ExternalDrafts.Add(draft);
-        await _db.SaveChangesAsync();
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            // Race condition: two simultaneous requests for the same smartQuoteId.
+            // The unique index caught the duplicate — return the existing draft id.
+            _db.ChangeTracker.Clear();
+            var existing = await _db.ExternalDrafts
+                .Where(d => d.SmartQuoteId == request.SmartQuoteId)
+                .Select(d => d.Id)
+                .FirstOrDefaultAsync();
+
+            throw new DuplicateSmartQuoteIdException(existing ?? "unknown");
+        }
 
         _logger.LogInformation(
             "Imported SmartQuote draft: {SmartQuoteId} -> {DraftId}",
@@ -110,57 +135,113 @@ public class ExternalDraftService : IExternalDraftService
         return draft;
     }
 
+    // Fix #2: atomic conditional UPDATE prevents double-approve race condition.
+    // ExecuteSqlAsync uses FormattableString parameters — no SQL injection risk.
     public async Task<ExternalDraft?> ApproveAsync(string id, string processedBy, string? sellerNip = null)
     {
-        var draft = await GetByIdAsync(id, sellerNip);
-        if (draft == null || draft.Status != ExternalDraftStatus.PENDING)
-            return null;
+        var now = DateTime.UtcNow;
+        int affected;
 
-        draft.Status = ExternalDraftStatus.APPROVED;
-        draft.ProcessedAt = DateTime.UtcNow;
-        draft.ProcessedBy = processedBy;
-        await _db.SaveChangesAsync();
+        if (!string.IsNullOrWhiteSpace(sellerNip))
+        {
+            affected = await _db.Database.ExecuteSqlAsync(
+                $@"UPDATE ""ExternalDrafts""
+                   SET ""Status"" = 'APPROVED', ""ProcessedAt"" = {now}, ""ProcessedBy"" = {processedBy}
+                   WHERE ""Id"" = {id} AND ""Status"" = 'PENDING' AND ""SellerNip"" = {sellerNip}");
+        }
+        else
+        {
+            affected = await _db.Database.ExecuteSqlAsync(
+                $@"UPDATE ""ExternalDrafts""
+                   SET ""Status"" = 'APPROVED', ""ProcessedAt"" = {now}, ""ProcessedBy"" = {processedBy}
+                   WHERE ""Id"" = {id} AND ""Status"" = 'PENDING'");
+        }
+
+        if (affected == 0) return null;
+
+        var draft = await _db.ExternalDrafts.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (draft == null) return null;
 
         _logger.LogInformation(
             "Approved draft: {DraftId} (SmartQuoteId: {SmartQuoteId})",
             id, draft.SmartQuoteId);
 
-        _ = SendWebhookAsync(draft.SmartQuoteId, "approved", draft.Id, "Faktura zatwierdzona")
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted)
-                    _logger.LogError(t.Exception, "Webhook send failed for draft {DraftId}", id);
-            }, TaskScheduler.Default);
+        _ = SendWebhookWithRetryAsync(draft.SmartQuoteId, "approved", draft.Id, "Faktura zatwierdzona");
 
         return draft;
     }
 
+    // Same atomic fix for Reject
     public async Task<ExternalDraft?> RejectAsync(string id, string processedBy, string reason, string? sellerNip = null)
     {
-        var draft = await GetByIdAsync(id, sellerNip);
-        if (draft == null || draft.Status != ExternalDraftStatus.PENDING)
-            return null;
+        var now = DateTime.UtcNow;
+        int affected;
 
-        draft.Status = ExternalDraftStatus.REJECTED;
-        draft.ProcessedAt = DateTime.UtcNow;
-        draft.ProcessedBy = processedBy;
-        draft.RejectionReason = reason;
-        await _db.SaveChangesAsync();
+        if (!string.IsNullOrWhiteSpace(sellerNip))
+        {
+            affected = await _db.Database.ExecuteSqlAsync(
+                $@"UPDATE ""ExternalDrafts""
+                   SET ""Status"" = 'REJECTED', ""ProcessedAt"" = {now}, ""ProcessedBy"" = {processedBy}, ""RejectionReason"" = {reason}
+                   WHERE ""Id"" = {id} AND ""Status"" = 'PENDING' AND ""SellerNip"" = {sellerNip}");
+        }
+        else
+        {
+            affected = await _db.Database.ExecuteSqlAsync(
+                $@"UPDATE ""ExternalDrafts""
+                   SET ""Status"" = 'REJECTED', ""ProcessedAt"" = {now}, ""ProcessedBy"" = {processedBy}, ""RejectionReason"" = {reason}
+                   WHERE ""Id"" = {id} AND ""Status"" = 'PENDING'");
+        }
+
+        if (affected == 0) return null;
+
+        var draft = await _db.ExternalDrafts.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (draft == null) return null;
 
         _logger.LogInformation(
             "Rejected draft: {DraftId} (SmartQuoteId: {SmartQuoteId}), reason: {Reason}",
             id, draft.SmartQuoteId, reason);
 
-        _ = SendWebhookAsync(draft.SmartQuoteId, "rejected", null, reason)
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted)
-                    _logger.LogError(t.Exception, "Webhook send failed for draft {DraftId}", id);
-            }, TaskScheduler.Default);
+        _ = SendWebhookWithRetryAsync(draft.SmartQuoteId, "rejected", null, reason);
 
         return draft;
     }
 
+    // Fix #3: retry with exponential backoff (1s, 2s, 4s). Fire-and-forget caller ignores the Task.
+    private async Task SendWebhookWithRetryAsync(string smartQuoteId, string action, string? externalId, string message)
+    {
+        const int maxAttempts = 4;
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            try
+            {
+                await SendWebhookAsync(smartQuoteId, action, externalId, message);
+                return;
+            }
+            catch (Exception ex) when (attempt < maxAttempts - 1)
+            {
+                var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt)); // 1s, 2s, 4s
+                _logger.LogWarning(
+                    ex,
+                    "Webhook attempt {Attempt}/{Max} failed for {SmartQuoteId}, retrying in {Delay}s",
+                    attempt + 1, maxAttempts, smartQuoteId, delay.TotalSeconds);
+                await Task.Delay(delay);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "All {Max} webhook attempts failed for {SmartQuoteId}",
+                    maxAttempts, smartQuoteId);
+            }
+        }
+    }
+
+    // Fix #4: HMAC-SHA256 signing (timestamp + smartQuoteId + action).
+    // SmartQuote verifies the same on receive. Prevents spoofed callbacks and replay attacks.
     private async Task SendWebhookAsync(
         string smartQuoteId,
         string action,
@@ -177,38 +258,48 @@ public class ExternalDraftService : IExternalDraftService
         }
 
         var payload = new { smartQuoteId, action, externalId, message };
+        var jsonBody = JsonSerializer.Serialize(payload);
         var fullUrl = $"{webhookUrl.TrimEnd('/')}/api/ksef/webhook";
+
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var signature = ComputeHmacSha256(apiKey, $"{timestamp}.{smartQuoteId}.{action}");
 
         _logger.LogInformation(
             "Sending webhook to {Url}: {Action} for {SmartQuoteId}",
             fullUrl, action, smartQuoteId);
 
-        try
+        var client = _httpClientFactory.CreateClient("SmartQuoteWebhook");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, fullUrl);
+        httpRequest.Headers.Add("X-API-Key", apiKey);
+        httpRequest.Headers.Add("X-Timestamp", timestamp);
+        httpRequest.Headers.Add("X-Signature", signature);
+        httpRequest.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+
+        var response = await client.SendAsync(httpRequest);
+
+        if (response.IsSuccessStatusCode)
         {
-            var client = _httpClientFactory.CreateClient("SmartQuoteWebhook");
-            var body = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-
-            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, fullUrl);
-            httpRequest.Headers.Add("X-API-Key", apiKey);
-            httpRequest.Content = body;
-
-            var response = await client.SendAsync(httpRequest);
-
-            if (response.IsSuccessStatusCode)
-            {
-                _logger.LogInformation("Webhook sent successfully for {SmartQuoteId}", smartQuoteId);
-            }
-            else
-            {
-                var responseBody = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning(
-                    "Webhook failed ({StatusCode}) for {SmartQuoteId}: {Body}",
-                    response.StatusCode, smartQuoteId, responseBody);
-            }
+            _logger.LogInformation("Webhook delivered for {SmartQuoteId}", smartQuoteId);
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogError(ex, "Webhook request failed for {SmartQuoteId}", smartQuoteId);
+            var body = await response.Content.ReadAsStringAsync();
+            _logger.LogWarning(
+                "Webhook returned {StatusCode} for {SmartQuoteId}: {Body}",
+                response.StatusCode, smartQuoteId, body);
+            // Throw so the retry wrapper can attempt again
+            throw new HttpRequestException($"Webhook non-success: {response.StatusCode}");
         }
+    }
+
+    private static bool IsUniqueViolation(DbUpdateException ex) =>
+        ex.InnerException is PostgresException { SqlState: "23505" };
+
+    private static string ComputeHmacSha256(string key, string data)
+    {
+        var keyBytes = Encoding.UTF8.GetBytes(key);
+        var dataBytes = Encoding.UTF8.GetBytes(data);
+        using var hmac = new HMACSHA256(keyBytes);
+        return Convert.ToHexString(hmac.ComputeHash(dataBytes)).ToLowerInvariant();
     }
 }
