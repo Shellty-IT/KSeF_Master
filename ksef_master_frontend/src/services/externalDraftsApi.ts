@@ -84,7 +84,7 @@ export function mapDraftToInvoiceForm(draft: ExternalDraft) {
             name: item.name,
             unit: item.unit,
             quantity: item.quantity,
-            unitPriceNet: item.unitPrice * (1 - item.discount / 100),
+            unitPriceNet: item.quantity > 0 ? item.totalNet / item.quantity : 0,
             vatRate: String(item.vatRate),
         })),
         currency: draft.currency,
