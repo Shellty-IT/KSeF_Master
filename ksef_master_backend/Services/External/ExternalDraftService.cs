@@ -1,8 +1,9 @@
-// Services/ExternalDraftService.cs
-using System.Collections.Concurrent;
+// Services/External/ExternalDraftService.cs
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using KSeF.Backend.Models;
+using KSeF.Backend.Models.Data;
 using KSeF.Backend.Models.Requests;
 using KSeF.Backend.Services.Interfaces.External;
 
@@ -10,35 +11,39 @@ namespace KSeF.Backend.Services.External;
 
 public class ExternalDraftService : IExternalDraftService
 {
-    private readonly ConcurrentDictionary<string, ExternalDraft> _drafts = new();
+    private readonly AppDbContext _db;
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ExternalDraftService> _logger;
 
     public ExternalDraftService(
+        AppDbContext db,
         IConfiguration configuration,
         IHttpClientFactory httpClientFactory,
         ILogger<ExternalDraftService> logger)
     {
+        _db = db;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
-    public ExternalDraft? GetById(string id)
+    public async Task<ExternalDraft?> GetByIdAsync(string id, string? sellerNip = null)
     {
-        _drafts.TryGetValue(id, out var draft);
-        return draft;
+        var query = _db.ExternalDrafts.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(sellerNip))
+            query = query.Where(d => d.SellerNip == sellerNip);
+        return await query.FirstOrDefaultAsync(d => d.Id == id);
     }
 
-    public ExternalDraft? GetBySmartQuoteId(string smartQuoteId)
+    public async Task<ExternalDraft?> GetBySmartQuoteIdAsync(string smartQuoteId)
     {
-        return _drafts.Values.FirstOrDefault(d => d.SmartQuoteId == smartQuoteId);
+        return await _db.ExternalDrafts.FirstOrDefaultAsync(d => d.SmartQuoteId == smartQuoteId);
     }
 
-    public List<ExternalDraft> GetAll(string? statusFilter = null)
+    public async Task<List<ExternalDraft>> GetAllAsync(string? statusFilter = null, string? sellerNip = null)
     {
-        var query = _drafts.Values.AsEnumerable();
+        var query = _db.ExternalDrafts.AsQueryable();
 
         if (!string.IsNullOrEmpty(statusFilter) &&
             Enum.TryParse<ExternalDraftStatus>(statusFilter, true, out var status))
@@ -46,15 +51,18 @@ public class ExternalDraftService : IExternalDraftService
             query = query.Where(d => d.Status == status);
         }
 
-        return query.OrderByDescending(d => d.CreatedAt).ToList();
+        if (!string.IsNullOrWhiteSpace(sellerNip))
+            query = query.Where(d => d.SellerNip == sellerNip);
+
+        return await query.OrderByDescending(d => d.CreatedAt).ToListAsync();
     }
 
-    public bool ExistsBySmartQuoteId(string smartQuoteId)
+    public async Task<bool> ExistsBySmartQuoteIdAsync(string smartQuoteId)
     {
-        return _drafts.Values.Any(d => d.SmartQuoteId == smartQuoteId);
+        return await _db.ExternalDrafts.AnyAsync(d => d.SmartQuoteId == smartQuoteId);
     }
 
-    public ExternalDraft Import(SmartQuoteImportRequest request)
+    public async Task<ExternalDraft> ImportAsync(SmartQuoteImportRequest request)
     {
         var draft = new ExternalDraft
         {
@@ -92,28 +100,32 @@ public class ExternalDraftService : IExternalDraftService
             PaymentDays = request.PaymentDays
         };
 
-        _drafts[draft.Id] = draft;
+        _db.ExternalDrafts.Add(draft);
+        await _db.SaveChangesAsync();
+
         _logger.LogInformation(
-            "Imported SmartQuote draft: {SmartQuoteId} → {DraftId}",
+            "Imported SmartQuote draft: {SmartQuoteId} -> {DraftId}",
             request.SmartQuoteId, draft.Id);
 
         return draft;
     }
 
-    public ExternalDraft? Approve(string id, string processedBy)
+    public async Task<ExternalDraft?> ApproveAsync(string id, string processedBy, string? sellerNip = null)
     {
-        if (!_drafts.TryGetValue(id, out var draft) || draft.Status != ExternalDraftStatus.PENDING)
+        var draft = await GetByIdAsync(id, sellerNip);
+        if (draft == null || draft.Status != ExternalDraftStatus.PENDING)
             return null;
 
         draft.Status = ExternalDraftStatus.APPROVED;
         draft.ProcessedAt = DateTime.UtcNow;
         draft.ProcessedBy = processedBy;
+        await _db.SaveChangesAsync();
 
         _logger.LogInformation(
             "Approved draft: {DraftId} (SmartQuoteId: {SmartQuoteId})",
             id, draft.SmartQuoteId);
 
-        SendWebhookAsync(draft.SmartQuoteId, "approved", draft.Id, "Faktura zatwierdzona")
+        _ = SendWebhookAsync(draft.SmartQuoteId, "approved", draft.Id, "Faktura zatwierdzona")
             .ContinueWith(t =>
             {
                 if (t.IsFaulted)
@@ -123,21 +135,23 @@ public class ExternalDraftService : IExternalDraftService
         return draft;
     }
 
-    public ExternalDraft? Reject(string id, string processedBy, string reason)
+    public async Task<ExternalDraft?> RejectAsync(string id, string processedBy, string reason, string? sellerNip = null)
     {
-        if (!_drafts.TryGetValue(id, out var draft) || draft.Status != ExternalDraftStatus.PENDING)
+        var draft = await GetByIdAsync(id, sellerNip);
+        if (draft == null || draft.Status != ExternalDraftStatus.PENDING)
             return null;
 
         draft.Status = ExternalDraftStatus.REJECTED;
         draft.ProcessedAt = DateTime.UtcNow;
         draft.ProcessedBy = processedBy;
         draft.RejectionReason = reason;
+        await _db.SaveChangesAsync();
 
         _logger.LogInformation(
             "Rejected draft: {DraftId} (SmartQuoteId: {SmartQuoteId}), reason: {Reason}",
             id, draft.SmartQuoteId, reason);
 
-        SendWebhookAsync(draft.SmartQuoteId, "rejected", null, reason)
+        _ = SendWebhookAsync(draft.SmartQuoteId, "rejected", null, reason)
             .ContinueWith(t =>
             {
                 if (t.IsFaulted)

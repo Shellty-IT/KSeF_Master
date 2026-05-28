@@ -37,7 +37,7 @@ public static class ServicesExtensions
     private static void RegisterSingletons(IServiceCollection services)
     {
         services.AddSingleton<KSeFSessionManager>();
-        services.AddSingleton<IExternalDraftService, ExternalDraftService>();
+        services.AddScoped<IExternalDraftService, ExternalDraftService>();
         services.AddSingleton<ExternalDraftValidator>();
         services.AddSingleton<ITokenEncryptionService, TokenEncryptionService>();
     }
