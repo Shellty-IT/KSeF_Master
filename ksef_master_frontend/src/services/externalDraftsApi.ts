@@ -7,11 +7,20 @@ import type {
     ExternalDraftStatus
 } from '../types/externalDraft';
 import { API_BASE_URL, HTTP_TIMEOUTS } from '../constants/api';
+import { tokenStorage } from './tokenStorage';
 
 const apiClient = axios.create({
     baseURL: `${API_BASE_URL}/api/v1/import`,
     headers: { 'Content-Type': 'application/json' },
     timeout: HTTP_TIMEOUTS.default,
+});
+
+apiClient.interceptors.request.use((config) => {
+    const token = tokenStorage.get();
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
 });
 
 export async function getDrafts(status?: ExternalDraftStatus): Promise<ExternalDraftsResponse> {
