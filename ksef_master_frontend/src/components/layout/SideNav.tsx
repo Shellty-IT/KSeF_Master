@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { SHELLTY_HOMEPAGE_URL } from '../../constants/urls';
 import {
     FilePlus2, LayoutDashboard, Inbox, Send, Download,
     Users, BarChart3, Settings, LogOut, ShieldCheck,
-    FileText, ChevronLeft, ChevronRight, Key, AlertTriangle,
+    ChevronLeft, ChevronRight, Key, AlertTriangle,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -68,8 +69,8 @@ export default function SideNav() {
             {/* Brand */}
             <div className="px-4 pt-5 pb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-emerald-600 shadow-[var(--shadow-cta)]">
-                        <FileText className="h-5 w-5 text-white" strokeWidth={2.5} />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-emerald-600 shadow-[var(--shadow-cta)] overflow-hidden">
+                        <img src="/ico.svg" alt="KSeF Master" className="h-7 w-7 object-contain" />
                     </div>
                     {!isCollapsed && (
                         <div className="min-w-0">
@@ -178,15 +179,15 @@ export default function SideNav() {
                                 <NavLink
                                     to={item.to}
                                     className={({ isActive }) =>
-                                        `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] transition ${isCollapsed ? 'justify-center' : ''} ${
+                                        `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition ${isCollapsed ? 'justify-center' : ''} ${
                                             isActive
-                                                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                                                : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                                                ? 'bg-sidebar-accent text-white'
+                                                : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-white'
                                         }`
                                     }
                                     title={isCollapsed ? item.label : undefined}
                                 >
-                                    <Icon className="h-4 w-4 shrink-0 text-sidebar-muted" />
+                                    <Icon className="h-4 w-4 shrink-0" />
                                     {!isCollapsed && item.label}
                                 </NavLink>
                             </li>
@@ -200,10 +201,10 @@ export default function SideNav() {
                 <NavLink
                     to="/settings"
                     className={({ isActive }) =>
-                        `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] transition ${isCollapsed ? 'justify-center' : ''} ${
+                        `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition ${isCollapsed ? 'justify-center' : ''} ${
                             isActive
-                                ? 'bg-sidebar-accent text-sidebar-foreground'
-                                : 'text-sidebar-foreground/80 hover:bg-sidebar-accent'
+                                ? 'bg-sidebar-accent text-white'
+                                : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-white'
                         }`
                     }
                     title={isCollapsed ? 'Ustawienia' : undefined}
@@ -212,7 +213,7 @@ export default function SideNav() {
                     {!isCollapsed && 'Ustawienia'}
                 </NavLink>
                 <button
-                    className={`mt-0.5 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] text-sidebar-foreground/80 transition hover:bg-sidebar-accent ${isCollapsed ? 'justify-center' : ''}`}
+                    className={`mt-0.5 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-sidebar-foreground transition hover:bg-sidebar-accent/70 hover:text-white ${isCollapsed ? 'justify-center' : ''}`}
                     onClick={handleLogout}
                     title={isCollapsed ? 'Wyloguj' : undefined}
                 >
@@ -220,7 +221,17 @@ export default function SideNav() {
                     {!isCollapsed && 'Wyloguj'}
                 </button>
                 {!isCollapsed && (
-                    <div className="mt-3 px-3 text-[10px] text-sidebar-muted">© 2026 KSeF Master</div>
+                    <div className="mt-3 px-3 text-[11px] text-sidebar-muted">
+                        © 2026 KSeF Master – by{' '}
+                        <a
+                            href={SHELLTY_HOMEPAGE_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-accent hover:underline"
+                        >
+                            Shellty
+                        </a>
+                    </div>
                 )}
             </div>
         </aside>

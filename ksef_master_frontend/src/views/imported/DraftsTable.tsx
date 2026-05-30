@@ -103,18 +103,18 @@ export default function DraftsTable({
                                             <td className="px-4 py-3">
                                                 <div className="leading-tight">
                                                     <div className="font-medium">{draft.buyerName}</div>
-                                                    <div className="font-mono text-[11px] text-muted-foreground">NIP {draft.buyerNip}</div>
+                                                    <div className="font-mono text-[11px] text-foreground/60">NIP {draft.buyerNip}</div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3 text-muted-foreground">{formatDate(draft.issueDate)}</td>
-                                            <td className="px-4 py-3 text-muted-foreground">{formatDate(draft.dueDate)}</td>
-                                            <td className="px-4 py-3 font-medium">{formatMoney(draft.totalGross, draft.currency)}</td>
+                                            <td className="px-4 py-3 text-foreground/70">{formatDate(draft.issueDate)}</td>
+                                            <td className="px-4 py-3 text-foreground/70">{formatDate(draft.dueDate)}</td>
+                                            <td className="px-4 py-3 font-semibold text-foreground">{formatMoney(draft.totalGross, draft.currency)}</td>
                                             <td className="px-4 py-3">
                                                 <Badge variant={STATUS_BADGE_VARIANTS[draft.status]} dot>
                                                     {STATUS_LABELS[draft.status]}
                                                 </Badge>
                                             </td>
-                                            <td className="px-4 py-3 text-muted-foreground">{formatDate(draft.createdAt)}</td>
+                                            <td className="px-4 py-3 text-foreground/70">{formatDate(draft.createdAt)}</td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-1">
                                                     <button

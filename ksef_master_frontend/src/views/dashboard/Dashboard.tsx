@@ -193,18 +193,18 @@ export default function Dashboard() {
                                         <tbody className="divide-y divide-border">
                                             {invoices.length > 0 ? (
                                                 invoices.slice(0, 10).map((row) => (
-                                                    <tr key={row.ksefNumber} className="hover:bg-muted/30 transition-colors">
-                                                        <td className="px-6 py-3 font-mono text-[12px] text-muted-foreground">{row.ksefNumber}</td>
-                                                        <td className="px-4 py-3">{row.invoiceNumber || '—'}</td>
-                                                        <td className="px-4 py-3">{row.seller?.name || '—'}</td>
-                                                        <td className="px-4 py-3 font-mono text-[12px]">{row.seller?.nip || '—'}</td>
-                                                        <td className="px-4 py-3 text-right font-medium">
+                                                    <tr key={row.ksefNumber} className="hover:bg-muted/40 transition-colors border-b border-border last:border-0">
+                                                        <td className="px-6 py-3 font-mono text-[12px] text-foreground/70">{row.ksefNumber}</td>
+                                                        <td className="px-4 py-3 font-medium text-foreground">{row.invoiceNumber || '—'}</td>
+                                                        <td className="px-4 py-3 text-foreground">{row.seller?.name || '—'}</td>
+                                                        <td className="px-4 py-3 font-mono text-[12px] text-foreground">{row.seller?.nip || '—'}</td>
+                                                        <td className="px-4 py-3 text-right font-semibold text-foreground">
                                                             {row.grossAmount?.toLocaleString('pl-PL', {
                                                                 style: 'currency',
                                                                 currency: row.currency || 'PLN',
                                                             }) || '—'}
                                                         </td>
-                                                        <td className="px-6 py-3 text-muted-foreground">{row.issueDate || '—'}</td>
+                                                        <td className="px-6 py-3 text-foreground/70">{row.issueDate || '—'}</td>
                                                     </tr>
                                                 ))
                                             ) : (

@@ -175,12 +175,12 @@ export default function IssuedInvoices() {
                                                                     onChange={() => toggleSelection(row.numerKsef)}
                                                                     className="rounded" />
                                                             </td>
-                                                            <td className="px-4 py-3 text-muted-foreground">{row.dataWystawienia}</td>
-                                                            <td className="px-4 py-3 font-mono text-[12px] text-muted-foreground">{row.numerKsef}</td>
-                                                            <td className="px-4 py-3">{row.numerFaktury}</td>
-                                                            <td className="px-4 py-3 font-mono text-[12px]">{row.nipKontrahenta}</td>
-                                                            <td className="px-4 py-3 max-w-[180px] truncate">{row.nazwaKontrahenta || '—'}</td>
-                                                            <td className="px-4 py-3 text-right font-medium">
+                                                            <td className="px-4 py-3 text-foreground/70">{row.dataWystawienia}</td>
+                                                            <td className="px-4 py-3 font-mono text-[12px] text-foreground/60">{row.numerKsef}</td>
+                                                            <td className="px-4 py-3 font-medium text-foreground">{row.numerFaktury}</td>
+                                                            <td className="px-4 py-3 font-mono text-[12px] text-foreground">{row.nipKontrahenta}</td>
+                                                            <td className="px-4 py-3 max-w-[180px] truncate text-foreground">{row.nazwaKontrahenta || '—'}</td>
+                                                            <td className="px-4 py-3 text-right font-semibold text-foreground">
                                                                 {row.kwotaBrutto.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
                                                             </td>
                                                             <td className="px-4 py-3 text-center">

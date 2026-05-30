@@ -96,12 +96,12 @@
   --ring: oklch(0.62 0.15 158);
 
   /* Sidebar: deep navy */
-  --sidebar: oklch(0.21 0.04 255);
-  --sidebar-foreground: oklch(0.96 0.01 250);
-  --sidebar-muted: oklch(0.7 0.02 250);
-  --sidebar-border: oklch(0.3 0.04 255);
-  --sidebar-accent: oklch(0.28 0.05 255);
-  --sidebar-accent-foreground: oklch(0.99 0.005 250);
+  --sidebar: oklch(0.19 0.04 255);
+  --sidebar-foreground: oklch(0.97 0.008 250);
+  --sidebar-muted: oklch(0.75 0.015 250);
+  --sidebar-border: oklch(0.32 0.04 255);
+  --sidebar-accent: oklch(0.27 0.05 255);
+  --sidebar-accent-foreground: oklch(1 0 0);
 }
 
 @layer base {
