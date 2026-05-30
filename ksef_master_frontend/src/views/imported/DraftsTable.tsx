@@ -1,8 +1,9 @@
-// src/views/imported/DraftsTable.tsx
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import InvoicePagination from '../../components/features/invoices/InvoicePagination';
+import { Badge } from '../../components/ui/Badge';
 import type { ExternalDraft } from '../../types/externalDraft';
-import { STATUS_LABELS, STATUS_CLASSES, formatDate, formatMoney, type StatusFilter } from './draftUtils';
+import { STATUS_LABELS, STATUS_BADGE_VARIANTS, formatDate, formatMoney, type StatusFilter } from './draftUtils';
+import { RefreshCw, Eye, Pencil, X, Loader2, Inbox } from 'lucide-react';
 
 interface Props {
     drafts: ExternalDraft[];
@@ -34,155 +35,141 @@ export default function DraftsTable({
     onRefetch, onSelectDraft, onApproveAndEdit, onOpenRejectModal,
 }: Props) {
     return (
-        <section className="ops-section">
-            <div className="ops-header">
-                <h2>Szkice do przetworzenia</h2>
-                <div className="ops-actions">
-                    <PrimaryButton
-                        onClick={() => onRefetch()}
-                        disabled={isLoading || isFetching}
-                        icon="⟳"
-                    >
-                        {isLoading || isFetching ? 'Pobieranie...' : 'Odśwież'}
-                    </PrimaryButton>
+        <section className="space-y-4">
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        Status:
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => { setStatusFilter(e.target.value as StatusFilter); setPage(1); }}
+                            className="rounded-lg border border-border bg-card px-2 py-1.5 text-sm"
+                        >
+                            <option value="all">Wszystkie</option>
+                            <option value="PENDING">Oczekujące</option>
+                            <option value="APPROVED">Zatwierdzone</option>
+                            <option value="REJECTED">Odrzucone</option>
+                        </select>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        Na stronę:
+                        <select
+                            value={pageSize}
+                            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                            className="rounded-lg border border-border bg-card px-2 py-1.5 text-sm"
+                        >
+                            <option value={10}>10</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                        </select>
+                    </label>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        {isFetching && !isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        <span>Wyników: {total}</span>
+                    </div>
+                </div>
+                <PrimaryButton onClick={onRefetch} disabled={isLoading || isFetching}>
+                    <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+                    {isLoading || isFetching ? 'Pobieranie...' : 'Odśwież'}
+                </PrimaryButton>
+            </div>
+
+            {/* Table */}
+            <div className="ks-card overflow-hidden">
+                <div className="overflow-x-auto">
+                    {isLoading && (
+                        <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" /> Pobieranie szkiców...
+                        </div>
+                    )}
+                    {error && (
+                        <div className="px-6 py-4 text-sm text-destructive">Nie udało się pobrać szkiców</div>
+                    )}
+                    {!isLoading && !error && (
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border bg-muted/40">
+                                    {['Nr oferty', 'Nabywca', 'Data wystawienia', 'Termin płatności', 'Kwota brutto', 'Status', 'Data importu', 'Akcje'].map((h) => (
+                                        <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {drafts.length > 0 ? (
+                                    drafts.map((draft) => (
+                                        <tr key={draft.id} className="transition-colors hover:bg-muted/30">
+                                            <td className="px-4 py-3 font-semibold">{draft.offerNumber}</td>
+                                            <td className="px-4 py-3">
+                                                <div className="leading-tight">
+                                                    <div className="font-medium">{draft.buyerName}</div>
+                                                    <div className="font-mono text-[11px] text-muted-foreground">NIP {draft.buyerNip}</div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">{formatDate(draft.issueDate)}</td>
+                                            <td className="px-4 py-3 text-muted-foreground">{formatDate(draft.dueDate)}</td>
+                                            <td className="px-4 py-3 font-medium">{formatMoney(draft.totalGross, draft.currency)}</td>
+                                            <td className="px-4 py-3">
+                                                <Badge variant={STATUS_BADGE_VARIANTS[draft.status]} dot>
+                                                    {STATUS_LABELS[draft.status]}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">{formatDate(draft.createdAt)}</td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        className="rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+                                                        onClick={() => onSelectDraft(draft)}
+                                                        title="Podgląd"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
+                                                    {draft.status === 'PENDING' && (
+                                                        <>
+                                                            <button
+                                                                className="inline-flex items-center gap-1 rounded-md bg-accent/10 px-2 py-1 text-[12px] font-medium text-accent transition hover:bg-accent/20 disabled:opacity-40"
+                                                                onClick={() => onApproveAndEdit(draft)}
+                                                                disabled={isApprovePending}
+                                                                title="Edytuj i Zatwierdź"
+                                                            >
+                                                                <Pencil className="h-3 w-3" /> Edytuj
+                                                            </button>
+                                                            <button
+                                                                className="rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
+                                                                onClick={() => onOpenRejectModal(draft.id)}
+                                                                disabled={isRejectPending}
+                                                                title="Odrzuć"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={8} className="py-14 text-center">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <Inbox className="h-8 w-8 text-muted-foreground/40" />
+                                                <p className="text-sm font-medium text-foreground">
+                                                    {statusFilter === 'PENDING' ? 'Brak oczekujących szkiców ze SmartQuote' : 'Brak szkiców spełniających kryteria'}
+                                                </p>
+                                                <p className="text-[12px] text-muted-foreground">
+                                                    Szkice pojawią się tutaj automatycznie po przesłaniu z systemu SmartQuote AI
+                                                </p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
 
-            <div className="filters-row">
-                <label className="filter-label">
-                    Status:
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => { setStatusFilter(e.target.value as StatusFilter); setPage(1); }}
-                        className="filter-select"
-                    >
-                        <option value="all">Wszystkie</option>
-                        <option value="PENDING">Oczekujące</option>
-                        <option value="APPROVED">Zatwierdzone</option>
-                        <option value="REJECTED">Odrzucone</option>
-                    </select>
-                </label>
-            </div>
-
-            <div className="table-controls">
-                <label className="page-size-label">
-                    Na stronę:
-                    <select
-                        value={pageSize}
-                        onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                        className="page-size-select"
-                    >
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                    </select>
-                </label>
-                <span className="results-count">
-                    {isFetching && !isLoading ? '⟳ ' : ''}Wyników: {total}
-                </span>
-            </div>
-
-            <div className="table-wrap">
-                {isLoading && (
-                    <div className="loading-spinner">
-                        <span className="loading-spinner-text">Pobieranie szkiców...</span>
-                    </div>
-                )}
-                {error && <div className="error-message">Nie udało się pobrać szkiców</div>}
-                {!isLoading && !error && (
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>Nr oferty</th>
-                                <th>Nabywca</th>
-                                <th>Data wystawienia</th>
-                                <th>Termin płatności</th>
-                                <th>Kwota brutto</th>
-                                <th>Status</th>
-                                <th>Data importu</th>
-                                <th>Akcje</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {drafts.length > 0 ? (
-                                drafts.map((draft) => (
-                                    <tr key={draft.id}>
-                                        <td><strong>{draft.offerNumber}</strong></td>
-                                        <td>
-                                            <div className="buyer-cell">
-                                                <span className="buyer-name">{draft.buyerName}</span>
-                                                <span className="buyer-nip">NIP: {draft.buyerNip}</span>
-                                            </div>
-                                        </td>
-                                        <td>{formatDate(draft.issueDate)}</td>
-                                        <td>{formatDate(draft.dueDate)}</td>
-                                        <td className="amount-cell">{formatMoney(draft.totalGross, draft.currency)}</td>
-                                        <td>
-                                            <span className={`status-badge ${STATUS_CLASSES[draft.status]}`}>
-                                                {STATUS_LABELS[draft.status]}
-                                            </span>
-                                        </td>
-                                        <td>{formatDate(draft.createdAt)}</td>
-                                        <td className="actions-cell">
-                                            <button
-                                                className="btn-icon"
-                                                onClick={() => onSelectDraft(draft)}
-                                                title="Podgląd"
-                                            >
-                                                👁️
-                                            </button>
-                                            {draft.status === 'PENDING' && (
-                                                <>
-                                                    <button
-                                                        className="btn-accent small"
-                                                        onClick={() => onApproveAndEdit(draft)}
-                                                        disabled={isApprovePending}
-                                                        title="Edytuj i Zatwierdź"
-                                                    >
-                                                        ✏️ Edytuj
-                                                    </button>
-                                                    <button
-                                                        className="btn-danger small"
-                                                        onClick={() => onOpenRejectModal(draft.id)}
-                                                        disabled={isRejectPending}
-                                                        title="Odrzuć"
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                </>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={8}>
-                                        <div className="empty-state">
-                                            <span className="empty-state-icon">📭</span>
-                                            <span className="empty-state-text">
-                                                {statusFilter === 'PENDING'
-                                                    ? 'Brak oczekujących szkiców ze SmartQuote'
-                                                    : 'Brak szkiców spełniających kryteria'}
-                                            </span>
-                                            <span className="empty-state-hint">
-                                                Szkice pojawią się tutaj automatycznie po przesłaniu z systemu SmartQuote AI
-                                            </span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-
-            <InvoicePagination
-                page={pageClamped}
-                totalPages={totalPages}
-                total={total}
-                pageSize={pageSize}
-                onPageChange={setPage}
-            />
+            <InvoicePagination page={pageClamped} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
         </section>
     );
 }

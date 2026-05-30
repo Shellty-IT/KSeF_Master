@@ -1,9 +1,8 @@
-// src/components/features/clients/ContractorSelect.tsx
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { getClients, type Client } from '../../../services/clientService';
 import { isValidNip, sanitizeNip } from '../../../helpers/nip';
 import BankAccountInput from '../../ui/BankAccountInput';
-import './ContractorSelect.css';
+import { ChevronDown, ChevronUp, Users } from 'lucide-react';
 
 export type PartyValue = {
     nip: string;
@@ -22,43 +21,27 @@ interface Props {
 }
 
 export default function ContractorSelect({
-                                             label,
-                                             value,
-                                             onChange,
-                                             placeholderNip = '0000000000',
-                                             className,
-                                             required,
-                                         }: Props) {
+    label,
+    value,
+    onChange,
+    placeholderNip = '0000000000',
+    className,
+    required,
+}: Props) {
     const [showDropdown, setShowDropdown] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [localClients, setLocalClients] = useState<Client[]>([]);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    // Pobierz klientów z localStorage
     useEffect(() => {
-        const loadClients = () => {
-            const clients = getClients();
-            setLocalClients(clients);
-        };
-
+        const loadClients = () => setLocalClients(getClients());
         loadClients();
-
-        const handleStorage = (e: StorageEvent) => {
-            if (e.key === 'appClients') {
-                loadClients();
-            }
-        };
-
+        const handleStorage = (e: StorageEvent) => { if (e.key === 'appClients') loadClients(); };
         window.addEventListener('storage', handleStorage);
         const interval = setInterval(loadClients, 2000);
-
-        return () => {
-            window.removeEventListener('storage', handleStorage);
-            clearInterval(interval);
-        };
+        return () => { window.removeEventListener('storage', handleStorage); clearInterval(interval); };
     }, []);
 
-    // Zamknij dropdown przy kliknięciu na zewnątrz
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -69,99 +52,68 @@ export default function ContractorSelect({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Filtruj lokalnych klientów
     const filteredClients = useMemo(() => {
         if (!searchTerm) return localClients;
         const term = searchTerm.toLowerCase();
-        return localClients.filter(client =>
-            client.name.toLowerCase().includes(term) ||
-            client.nip.includes(searchTerm) ||
-            (client.address?.toLowerCase().includes(term) ?? false)
+        return localClients.filter(c =>
+            c.name.toLowerCase().includes(term) || c.nip.includes(searchTerm) ||
+            (c.address?.toLowerCase().includes(term) ?? false)
         );
     }, [localClients, searchTerm]);
 
-    // Walidacja NIP
     const nipValue = value?.nip || '';
     const sanitizedNip = sanitizeNip(nipValue);
     const nipValid = sanitizedNip.length === 0 || isValidNip(sanitizedNip);
 
     function selectLocalClient(client: Client) {
-        onChange({
-            nip: client.nip,
-            name: client.name,
-            address: client.address || '',
-            bankAccount: client.bankAccount || '',
-        });
-        setShowDropdown(false);
-        setSearchTerm('');
+        onChange({ nip: client.nip, name: client.name, address: client.address || '', bankAccount: client.bankAccount || '' });
+        setShowDropdown(false); setSearchTerm('');
     }
 
     function handleFieldChange(field: keyof PartyValue, val: string) {
-        if (field === 'nip') {
-            onChange({ ...value, nip: sanitizeNip(val) });
-        } else {
-            onChange({ ...value, [field]: val });
-        }
+        if (field === 'nip') onChange({ ...value, nip: sanitizeNip(val) });
+        else onChange({ ...value, [field]: val });
     }
 
     return (
-        <div className={`contractor-select ${className || ''}`} ref={wrapperRef}>
-            {label && <span className="contractor-label">{label}{required ? ' *' : ''}</span>}
+        <div className={`space-y-3 ${className || ''}`} ref={wrapperRef}>
+            {label && <p className="ks-label">{label}{required ? ' *' : ''}</p>}
 
-            {/* Przycisk wyboru z listy kontrahentów */}
             {localClients.length > 0 && (
-                <div className="client-selector">
-                    <button
-                        type="button"
-                        className="btn-select-client"
-                        onClick={() => setShowDropdown(!showDropdown)}
-                    >
-                        <span className="btn-icon">📋</span>
-                        <span>Wybierz z listy ({localClients.length})</span>
-                        <span className="dropdown-arrow">{showDropdown ? '▲' : '▼'}</span>
+                <div className="relative">
+                    <button type="button"
+                        className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm transition hover:bg-secondary"
+                        onClick={() => setShowDropdown(!showDropdown)}>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="flex-1 text-left text-muted-foreground">Wybierz z listy ({localClients.length})</span>
+                        {showDropdown ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                     </button>
 
                     {showDropdown && (
-                        <div className="client-dropdown">
-                            <div className="dropdown-search">
-                                <input
-                                    type="text"
-                                    placeholder="Szukaj po nazwie lub NIP..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    autoFocus
-                                />
+                        <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-border bg-card shadow-[var(--shadow-elevated)]">
+                            <div className="p-2 border-b border-border">
+                                <input type="text" placeholder="Szukaj po nazwie lub NIP..."
+                                    value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="ks-input-sm" autoFocus />
                             </div>
-
-                            <div className="dropdown-list">
+                            <div className="max-h-48 overflow-y-auto">
                                 {filteredClients.length === 0 ? (
-                                    <div className="dropdown-empty">
+                                    <div className="px-3 py-4 text-center text-sm text-muted-foreground">
                                         {searchTerm ? `Brak wyników dla "${searchTerm}"` : 'Brak zapisanych kontrahentów'}
                                     </div>
                                 ) : (
                                     filteredClients.map((client) => (
-                                        <button
-                                            key={client.id}
-                                            type="button"
-                                            className="dropdown-item"
-                                            onClick={() => selectLocalClient(client)}
-                                        >
-                                            <div className="item-name">{client.name}</div>
-                                            <div className="item-details">
-                                                <span className="item-nip">NIP: {client.nip}</span>
-                                                {client.address && (
-                                                    <span className="item-address">{client.address}</span>
-                                                )}
-                                            </div>
+                                        <button key={client.id} type="button"
+                                            className="flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition hover:bg-muted/40"
+                                            onClick={() => selectLocalClient(client)}>
+                                            <span className="text-sm font-medium text-foreground">{client.name}</span>
+                                            <span className="font-mono text-[11px] text-muted-foreground">NIP {client.nip}{client.address ? ` · ${client.address}` : ''}</span>
                                         </button>
                                     ))
                                 )}
                             </div>
-
-                            <div className="dropdown-footer">
-                                <a href="/clients" className="add-client-link">
-                                    + Zarządzaj kontrahentami
-                                </a>
+                            <div className="border-t border-border px-3 py-2">
+                                <a href="/clients" className="text-[12px] text-accent hover:underline">+ Zarządzaj kontrahentami</a>
                             </div>
                         </div>
                     )}
@@ -169,60 +121,41 @@ export default function ContractorSelect({
             )}
 
             {localClients.length === 0 && (
-                <div className="no-clients-hint">
-                    <span>Brak zapisanych kontrahentów. </span>
-                    <a href="/clients">Dodaj pierwszego kontrahenta →</a>
-                </div>
+                <p className="text-[12px] text-muted-foreground">
+                    Brak zapisanych kontrahentów.{' '}
+                    <a href="/clients" className="text-accent hover:underline">Dodaj pierwszego kontrahenta →</a>
+                </p>
             )}
 
             {localClients.length > 0 && (
-                <div className="divider">
+                <div className="relative flex items-center gap-3 text-[11px] text-muted-foreground">
+                    <div className="h-px flex-1 bg-border" />
                     <span>lub wprowadź ręcznie</span>
+                    <div className="h-px flex-1 bg-border" />
                 </div>
             )}
 
-            {/* Pola formularza */}
-            <div className="contractor-fields">
-                <label className="field">
-                    <span className="label small">NIP *</span>
-                    <input
-                        className={`input ${nipValue && !nipValid ? 'input--error' : ''}`}
-                        value={nipValue}
-                        onChange={(e) => handleFieldChange('nip', e.target.value)}
-                        placeholder={placeholderNip}
-                        inputMode="numeric"
-                        maxLength={10}
-                    />
-                    {nipValue && !nipValid && (
-                        <div className="field-error">Nieprawidłowy NIP (wymagane 10 cyfr)</div>
-                    )}
-                </label>
-
-                <label className="field">
-                    <span className="label small">Nazwa *</span>
-                    <input
-                        className="input"
-                        value={value?.name || ''}
-                        onChange={(e) => handleFieldChange('name', e.target.value)}
-                        placeholder="Nazwa kontrahenta"
-                    />
-                </label>
-
-                <label className="field">
-                    <span className="label small">Adres *</span>
-                    <input
-                        className="input"
-                        value={value?.address || ''}
-                        onChange={(e) => handleFieldChange('address', e.target.value)}
-                        placeholder="Ulica, nr, kod pocztowy, miejscowość"
-                    />
-                </label>
-
-                <BankAccountInput
-                    label="Rachunek bankowy (opcjonalnie)"
-                    value={value?.bankAccount || ''}
-                    onChange={(v) => handleFieldChange('bankAccount', v)}
-                />
+            <div className="space-y-3">
+                <div className="space-y-1.5">
+                    <label className="ks-label" htmlFor="cs-nip">NIP *</label>
+                    <input id="cs-nip" type="text" inputMode="numeric" maxLength={10}
+                        className={`ks-input font-mono ${nipValue && !nipValid ? 'border-destructive focus:ring-destructive/40' : ''}`}
+                        value={nipValue} onChange={(e) => handleFieldChange('nip', e.target.value)}
+                        placeholder={placeholderNip} />
+                    {nipValue && !nipValid && <p className="text-[12px] text-destructive">Nieprawidłowy NIP (wymagane 10 cyfr)</p>}
+                </div>
+                <div className="space-y-1.5">
+                    <label className="ks-label" htmlFor="cs-name">Nazwa *</label>
+                    <input id="cs-name" type="text" className="ks-input" placeholder="Nazwa kontrahenta"
+                        value={value?.name || ''} onChange={(e) => handleFieldChange('name', e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                    <label className="ks-label" htmlFor="cs-address">Adres *</label>
+                    <input id="cs-address" type="text" className="ks-input" placeholder="Ulica, nr, kod pocztowy, miejscowość"
+                        value={value?.address || ''} onChange={(e) => handleFieldChange('address', e.target.value)} />
+                </div>
+                <BankAccountInput label="Rachunek bankowy (opcjonalnie)" value={value?.bankAccount || ''}
+                    onChange={(v) => handleFieldChange('bankAccount', v)} />
             </div>
         </div>
     );

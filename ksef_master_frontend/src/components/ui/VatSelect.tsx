@@ -6,6 +6,7 @@ interface Props {
     onChange: (v: VatRate) => void;
     name?: string;
     className?: string;
+    compact?: boolean;
 }
 
 const OPTIONS: { value: VatRate; label: string }[] = [
@@ -14,27 +15,33 @@ const OPTIONS: { value: VatRate; label: string }[] = [
     { value: 5, label: '5%' },
     { value: 0, label: '0%' },
     { value: 'ZW', label: 'ZW' },
-    { value: 'NP', label: 'NP' }
+    { value: 'NP', label: 'NP' },
 ];
 
-export default function VatSelect({ label, value, onChange, name, className }: Props) {
+export default function VatSelect({ label, value, onChange, name, className, compact = false }: Props) {
+    const selectEl = (
+        <select
+            name={name}
+            value={String(value)}
+            className={`${compact ? 'ks-input-sm' : 'ks-input'} ${className || ''}`}
+            onChange={(e) => {
+                const val = e.target.value;
+                const v = val === 'ZW' || val === 'NP' ? (val as VatRate) : (Number(val) as VatRate);
+                onChange(v);
+            }}
+        >
+            {OPTIONS.map((o) => (
+                <option key={String(o.value)} value={String(o.value)}>{o.label}</option>
+            ))}
+        </select>
+    );
+
+    if (!label) return selectEl;
+
     return (
-        <label className={`field ${className || ''}`}>
-            {label && <span className="label">{label}</span>}
-            <select
-                className="select"
-                name={name}
-                value={String(value)}
-                onChange={(e) => {
-                    const val = e.target.value;
-                    const v = val === 'ZW' || val === 'NP' ? (val as VatRate) : (Number(val) as VatRate);
-                    onChange(v);
-                }}
-            >
-                {OPTIONS.map(o => (
-                    <option key={String(o.value)} value={String(o.value)}>{o.label}</option>
-                ))}
-            </select>
-        </label>
+        <div className="space-y-1.5">
+            <label className="ks-label">{label}</label>
+            {selectEl}
+        </div>
     );
 }

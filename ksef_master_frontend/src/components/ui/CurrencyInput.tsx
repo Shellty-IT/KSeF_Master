@@ -10,6 +10,7 @@ interface Props {
     disabled?: boolean;
     required?: boolean;
     className?: string;
+    compact?: boolean;
 }
 
 export default function CurrencyInput(props: Props) {

@@ -1,4 +1,3 @@
-// src/views/imported/draftUtils.ts
 import type { ExternalDraftStatus } from '../../types/externalDraft';
 
 export type StatusFilter = 'all' | ExternalDraftStatus;
@@ -9,10 +8,10 @@ export const STATUS_LABELS: Record<ExternalDraftStatus, string> = {
     REJECTED: 'Odrzucony',
 };
 
-export const STATUS_CLASSES: Record<ExternalDraftStatus, string> = {
-    PENDING: 'status-pending',
-    APPROVED: 'status-approved',
-    REJECTED: 'status-rejected',
+export const STATUS_BADGE_VARIANTS: Record<ExternalDraftStatus, 'warning' | 'success' | 'danger'> = {
+    PENDING: 'warning',
+    APPROVED: 'success',
+    REJECTED: 'danger',
 };
 
 export function formatDate(dateStr: string): string {

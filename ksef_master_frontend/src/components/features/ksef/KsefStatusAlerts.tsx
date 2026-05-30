@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { Settings, Plug, AlertTriangle } from 'lucide-react';
 
 interface KsefStatusAlertsProps {
     needsCompanySetup: boolean;
@@ -10,13 +11,18 @@ export default function KsefStatusAlerts({ needsCompanySetup, isKsefConnected }:
 
     if (needsCompanySetup) {
         return (
-            <div className="alert-box warning">
-                <span className="alert-icon">⚙️</span>
-                <div className="alert-content">
-                    <strong>Firma nie jest skonfigurowana</strong>
-                    <p>
-                        Aby pobierać faktury z KSeF, skonfiguruj dane firmy (NIP + token autoryzacyjny).
-                        Użyj przycisku „Skonfiguruj firmę" w panelu bocznym.
+            <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3.5 text-sm">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                <div>
+                    <strong className="font-semibold text-warning-foreground">Firma nie jest skonfigurowana</strong>
+                    <p className="mt-0.5 text-muted-foreground">
+                        Aby pobierać faktury z KSeF, skonfiguruj dane firmy (NIP + token autoryzacyjny).{' '}
+                        <button
+                            onClick={() => navigate('/settings')}
+                            className="font-medium text-accent hover:underline"
+                        >
+                            Przejdź do ustawień
+                        </button>
                     </p>
                 </div>
             </div>
@@ -25,16 +31,19 @@ export default function KsefStatusAlerts({ needsCompanySetup, isKsefConnected }:
 
     if (!isKsefConnected) {
         return (
-            <div className="alert-box warning">
-                <span className="alert-icon">🔌</span>
-                <div className="alert-content">
-                    <strong>Brak połączenia z KSeF</strong>
-                    <p>
-                        Połącz się z Krajowym Systemem e-Faktur, aby wyświetlić faktury.
-                        Użyj przycisku „Połącz z KSeF" w panelu bocznym lub przejdź do{' '}
-                        <button onClick={() => navigate('/settings')} className="link-button">
-                            Ustawień
-                        </button>.
+            <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3.5 text-sm">
+                <Plug className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                <div>
+                    <strong className="font-semibold text-warning-foreground">Brak połączenia z KSeF</strong>
+                    <p className="mt-0.5 text-muted-foreground">
+                        Połącz się z Krajowym Systemem e-Faktur, aby wyświetlić faktury.{' '}
+                        <button
+                            onClick={() => navigate('/settings')}
+                            className="inline-flex items-center gap-1 font-medium text-accent hover:underline"
+                        >
+                            <Settings className="h-3 w-3" />
+                            Ustawienia
+                        </button>
                     </p>
                 </div>
             </div>

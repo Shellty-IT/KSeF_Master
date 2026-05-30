@@ -15,27 +15,27 @@ interface Props {
     required?: boolean;
     className?: string;
     suffix?: string;
+    compact?: boolean;
 }
 
 export default function NumberInput({
-                                        label,
-                                        value,
-                                        onChange,
-                                        placeholder,
-                                        min,
-                                        max,
-                                        step: _step = 0.01,
-                                        name,
-                                        disabled,
-                                        required,
-                                        className,
-                                        suffix
-                                    }: Props) {
-    const [text, setText] = useState<string>(value === undefined ? '' : String(value));
-
-    // Używamy _step żeby uniknąć błędu unused variable
-    // W przyszłości można użyć do walidacji kroków
+    label,
+    value,
+    onChange,
+    placeholder,
+    min,
+    max,
+    step: _step = 0.01,
+    name,
+    disabled,
+    required,
+    className,
+    suffix,
+    compact = false,
+}: Props) {
     void _step;
+
+    const [text, setText] = useState<string>(value === undefined ? '' : String(value));
 
     useEffect(() => {
         const v = value === undefined ? '' : String(value).replace('.', ',');
@@ -47,30 +47,39 @@ export default function NumberInput({
         const t = e.target.value;
         setText(t);
         const num = parseNumberLike(t);
-        if (num === undefined) {
-            onChange(undefined);
-            return;
-        }
+        if (num === undefined) { onChange(undefined); return; }
         if (min !== undefined && num < min) return;
         if (max !== undefined && num > max) return;
         onChange(num);
     }
 
+    const inputClass = compact ? 'ks-input-sm' : 'ks-input';
+
+    const input = (
+        <div className={suffix ? 'flex' : ''}>
+            <input
+                name={name}
+                inputMode="decimal"
+                className={`${inputClass} ${suffix ? 'rounded-r-none' : ''} ${className || ''}`}
+                placeholder={placeholder}
+                value={text}
+                onChange={handleChange}
+                disabled={disabled}
+            />
+            {suffix && (
+                <span className="flex items-center rounded-r-md border border-l-0 border-input bg-muted px-2.5 text-[12px] text-muted-foreground">
+                    {suffix}
+                </span>
+            )}
+        </div>
+    );
+
+    if (!label) return input;
+
     return (
-        <label className={`field ${className || ''}`}>
-            {label && <span className="label">{label}{required ? ' *' : ''}</span>}
-            <div className="input-group">
-                <input
-                    name={name}
-                    inputMode="decimal"
-                    className="input"
-                    placeholder={placeholder}
-                    value={text}
-                    onChange={handleChange}
-                    disabled={disabled}
-                />
-                {suffix && <span className="suffix">{suffix}</span>}
-            </div>
-        </label>
+        <div className="space-y-1.5">
+            <label className="ks-label">{label}{required ? ' *' : ''}</label>
+            {input}
+        </div>
     );
 }

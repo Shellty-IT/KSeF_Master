@@ -1,5 +1,5 @@
-// src/views/settings/tabs/KsefAuthMethodCard.tsx
 import CertificateUpload from '../../../components/features/settings/CertificateUpload';
+import { Key, ShieldCheck, Pencil, Loader2, Save } from 'lucide-react';
 
 interface Props {
     authMethod: 'token' | 'certificate';
@@ -23,103 +23,77 @@ export default function KsefAuthMethodCard({
     onSwitchMethod, onSaveToken, onCertificateSuccess,
 }: Props) {
     return (
-        <div className="card">
-            <h3>🔐 Metoda uwierzytelniania</h3>
-            <p className="hint ksef-setup-hint">
-                Zmień metodę łączenia się z systemem KSeF w dowolnym momencie.
-            </p>
+        <div className="ks-card p-5 space-y-5">
+            <div>
+                <h3 className="text-sm font-semibold text-foreground">Metoda uwierzytelniania</h3>
+                <p className="mt-0.5 text-[12px] text-muted-foreground">Zmień metodę łączenia się z systemem KSeF w dowolnym momencie.</p>
+            </div>
 
-            <div className="auth-method-selector">
-                <label className="auth-method-option">
-                    <input
-                        type="radio"
-                        name="authMethod"
-                        value="token"
-                        checked={authMethod === 'token'}
-                        onChange={() => onSwitchMethod('token')}
-                        disabled={isSwitching}
-                    />
-                    <div className="auth-method-content">
-                        <div className="auth-method-icon">🔑</div>
-                        <div className="auth-method-text">
-                            <div className="auth-method-title">Token autoryzacyjny</div>
-                            <div className="auth-method-description">
-                                Standardowe uwierzytelnianie tokenem generowanym w systemie KSeF
-                            </div>
+            <div className="space-y-2">
+                {[
+                    { value: 'token' as const, label: 'Token autoryzacyjny', desc: 'Standardowe uwierzytelnianie tokenem generowanym w systemie KSeF', Icon: Key, disabled: false },
+                    { value: 'certificate' as const, label: 'Certyfikat KSeF', desc: 'Uwierzytelnianie za pomocą certyfikatu wygenerowanego w systemie KSeF (XAdES)', Icon: ShieldCheck, disabled: !hasCertificate },
+                ].map(({ value, label, desc, Icon, disabled }) => (
+                    <label key={value}
+                        className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition ${disabled ? 'cursor-not-allowed opacity-50' : ''} ${authMethod === value ? 'border-accent bg-accent/5' : 'border-border hover:bg-muted/40'}`}>
+                        <input type="radio" name="authMethod" value={value}
+                            checked={authMethod === value}
+                            onChange={() => onSwitchMethod(value)}
+                            disabled={isSwitching || disabled}
+                            className="sr-only" />
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+                            <Icon className="h-4 w-4 text-muted-foreground" />
                         </div>
-                    </div>
-                </label>
-                <label className="auth-method-option">
-                    <input
-                        type="radio"
-                        name="authMethod"
-                        value="certificate"
-                        checked={authMethod === 'certificate'}
-                        onChange={() => onSwitchMethod('certificate')}
-                        disabled={isSwitching || !hasCertificate}
-                    />
-                    <div className="auth-method-content">
-                        <div className="auth-method-icon">🔐</div>
-                        <div className="auth-method-text">
-                            <div className="auth-method-title">
-                                Certyfikat KSeF
-                                {!hasCertificate && (
-                                    <span className="auth-method-badge">Wymaga przesłania</span>
+                        <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground">
+                                {label}
+                                {value === 'certificate' && !hasCertificate && (
+                                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">Wymaga przesłania</span>
                                 )}
-                            </div>
-                            <div className="auth-method-description">
-                                Uwierzytelnianie za pomocą certyfikatu wygenerowanego w systemie KSeF (XAdES)
-                            </div>
+                            </p>
+                            <p className="text-[12px] text-muted-foreground">{desc}</p>
                         </div>
-                    </div>
-                </label>
+                    </label>
+                ))}
             </div>
 
             {authMethod === 'token' && (
-                <div className="ksef-method-extra">
-                    <div className="ksef-token-header">
-                        <h4 className="ksef-section-title">🔑 Token KSeF</h4>
+                <div className="space-y-3 border-t border-border pt-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-foreground">Token KSeF</h4>
                         {!isEditingToken && (
-                            <button className="btn-light" onClick={() => setIsEditingToken(true)}>
-                                ✏️ Zmień token
+                            <button className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[12px] transition hover:bg-secondary"
+                                onClick={() => setIsEditingToken(true)}>
+                                <Pencil className="h-3.5 w-3.5" /> Zmień token
                             </button>
                         )}
                     </div>
                     {isEditingToken ? (
-                        <>
-                            <label>Nowy token KSeF *
-                                <input
-                                    type="text"
-                                    value={ksefToken}
-                                    onChange={(e) => setKsefToken(e.target.value)}
-                                    placeholder="Wklej nowy token z aplikacji KSeF"
-                                    className="input-mono"
-                                />
-                                <span className="input-hint">Format: XXXX-XX-XXXX|nip-XXXX|hash</span>
-                            </label>
-                            <div className="ksef-action-row">
-                                <button
-                                    className="btn-light btn-save"
-                                    onClick={onSaveToken}
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? '⏳ Zapisywanie...' : '💾 Zapisz'}
-                                </button>
-                                <button className="btn-light" onClick={() => { setIsEditingToken(false); setKsefToken(''); }}>
-                                    Anuluj
-                                </button>
+                        <div className="space-y-3">
+                            <div className="space-y-1.5">
+                                <label className="ks-label" htmlFor="new-token">Nowy token KSeF *</label>
+                                <input id="new-token" type="text" className="ks-input font-mono text-[12px]"
+                                    value={ksefToken} onChange={(e) => setKsefToken(e.target.value)}
+                                    placeholder="Wklej nowy token z aplikacji KSeF" />
+                                <p className="text-[11px] text-muted-foreground">Format: XXXX-XX-XXXX|nip-XXXX|hash</p>
                             </div>
-                        </>
+                            <div className="flex items-center gap-2">
+                                <button className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-cta)] transition hover:brightness-110 disabled:opacity-40"
+                                    onClick={onSaveToken} disabled={isSubmitting}>
+                                    {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" />Zapisywanie...</> : <><Save className="h-4 w-4" />Zapisz</>}
+                                </button>
+                                <button className="rounded-lg border border-border bg-card px-4 py-2 text-sm transition hover:bg-secondary"
+                                    onClick={() => { setIsEditingToken(false); setKsefToken(''); }}>Anuluj</button>
+                            </div>
+                        </div>
                     ) : (
-                        <p className="hint ksef-token-hint">
-                            Token jest przechowywany w bezpiecznej formie (szyfrowany AES-256).
-                        </p>
+                        <p className="text-[12px] text-muted-foreground">Token jest przechowywany w bezpiecznej formie (szyfrowany AES-256).</p>
                     )}
                 </div>
             )}
 
-            <div className="ksef-method-extra">
-                <h4 className="ksef-section-title">📤 Zarządzanie certyfikatem</h4>
+            <div className="border-t border-border pt-4">
+                <h4 className="mb-3 text-sm font-medium text-foreground">Zarządzanie certyfikatem</h4>
                 <CertificateUpload onSuccess={onCertificateSuccess} />
             </div>
         </div>

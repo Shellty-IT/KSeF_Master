@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import './Settings.css';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
 import TabKsefConnection from './tabs/TabKsefConnection';
@@ -8,58 +7,61 @@ import TabFraudDetection from './tabs/TabFraudDetection';
 import TabInvoiceDefaults from './tabs/TabInvoiceDefaults';
 import TabPrintPdf from './tabs/TabPrintPdf';
 import TabDangerZone from './tabs/TabDangerZone';
+import { Link2, Building2, ShieldAlert, FileText, Printer, AlertTriangle } from 'lucide-react';
 
 type SettingsTab = 'ksef' | 'company' | 'fraud' | 'invoiceDefaults' | 'print' | 'danger';
 
-interface TabConfig {
-    id: SettingsTab;
-    label: string;
-    icon: string;
-}
-
-const TABS: TabConfig[] = [
-    { id: 'ksef',            label: 'Połączenie KSeF',   icon: '🔗' },
-    { id: 'company',         label: 'Dane firmy',         icon: '🏢' },
-    { id: 'fraud',           label: 'Wykrywanie oszustw', icon: '🚨' },
-    { id: 'invoiceDefaults', label: 'Domyślne faktury',   icon: '📄' },
-    { id: 'print',           label: 'Druk / PDF',         icon: '🖨️' },
-    { id: 'danger',          label: 'Strefa ryzyka',      icon: '⚠️' },
+const TABS = [
+    { id: 'ksef' as SettingsTab,            label: 'Połączenie KSeF',   Icon: Link2 },
+    { id: 'company' as SettingsTab,         label: 'Dane firmy',         Icon: Building2 },
+    { id: 'fraud' as SettingsTab,           label: 'Wykrywanie oszustw', Icon: ShieldAlert },
+    { id: 'invoiceDefaults' as SettingsTab, label: 'Domyślne faktury',   Icon: FileText },
+    { id: 'print' as SettingsTab,           label: 'Druk / PDF',         Icon: Printer },
+    { id: 'danger' as SettingsTab,          label: 'Strefa ryzyka',      Icon: AlertTriangle },
 ];
 
 export default function Settings() {
     const [activeTab, setActiveTab] = useState<SettingsTab>('ksef');
 
     return (
-        <div className="dash-root">
+        <div className="flex h-screen overflow-hidden bg-background">
             <SideNav />
-            <main className="dash-main">
+            <main className="flex flex-1 flex-col overflow-hidden">
                 <TopBar />
-                <div className="dash-content">
-                    <header className="dash-header">
-                        <h1>Ustawienia</h1>
-                        <p className="subtitle">Konfiguracja aplikacji, firmy i domyślnych parametrów faktur</p>
-                    </header>
+                <div className="flex-1 overflow-y-auto">
+                    <div className="mx-auto max-w-3xl space-y-6 p-8">
+                        <header>
+                            <h1 className="text-2xl font-bold tracking-tight text-foreground">Ustawienia</h1>
+                            <p className="mt-1 text-sm text-muted-foreground">Konfiguracja aplikacji, firmy i domyślnych parametrów faktur</p>
+                        </header>
 
-                    <div className="settings-tabs-nav">
-                        {TABS.map((tab) => (
-                            <button
-                                key={tab.id}
-                                className={`settings-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-                                onClick={() => setActiveTab(tab.id)}
-                            >
-                                <span className="settings-tab-icon">{tab.icon}</span>
-                                <span className="settings-tab-label">{tab.label}</span>
-                            </button>
-                        ))}
-                    </div>
+                        {/* Tab navigation */}
+                        <div className="flex flex-wrap gap-1 rounded-xl border border-border bg-muted/30 p-1">
+                            {TABS.map(({ id, label, Icon }) => (
+                                <button
+                                    key={id}
+                                    className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-medium transition ${
+                                        activeTab === id
+                                            ? 'bg-card text-foreground shadow-[var(--shadow-card)]'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    } ${id === 'danger' ? 'ml-auto text-destructive/70 hover:text-destructive' : ''}`}
+                                    onClick={() => setActiveTab(id)}
+                                >
+                                    <Icon className="h-3.5 w-3.5" />
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
 
-                    <div className="settings-tab-content">
-                        {activeTab === 'ksef'            && <TabKsefConnection />}
-                        {activeTab === 'company'         && <TabCompanyProfile />}
-                        {activeTab === 'fraud'           && <TabFraudDetection />}
-                        {activeTab === 'invoiceDefaults' && <TabInvoiceDefaults />}
-                        {activeTab === 'print'           && <TabPrintPdf />}
-                        {activeTab === 'danger'          && <TabDangerZone />}
+                        {/* Tab content */}
+                        <div>
+                            {activeTab === 'ksef'            && <TabKsefConnection />}
+                            {activeTab === 'company'         && <TabCompanyProfile />}
+                            {activeTab === 'fraud'           && <TabFraudDetection />}
+                            {activeTab === 'invoiceDefaults' && <TabInvoiceDefaults />}
+                            {activeTab === 'print'           && <TabPrintPdf />}
+                            {activeTab === 'danger'          && <TabDangerZone />}
+                        </div>
                     </div>
                 </div>
             </main>

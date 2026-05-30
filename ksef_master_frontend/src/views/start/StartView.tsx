@@ -1,10 +1,8 @@
-// src/views/start/StartView.tsx
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useServerHealth } from '../../hooks/useServerHealth';
 import ServerStartup from '../../components/features/startup/ServerStartup';
-import './StartView.css';
 
 export default function StartView() {
     const navigate = useNavigate();
@@ -34,16 +32,11 @@ export default function StartView() {
     }
 
     return (
-        <div className="start-root" style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            background: 'var(--bg, #0e1116)',
-            color: 'var(--muted, #a4a9b6)',
-            fontSize: '16px',
-        }}>
-            ⏳ Ładowanie...
+        <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
+            <div className="flex items-center gap-3 text-sm">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                Ładowanie...
+            </div>
         </div>
     );
 }

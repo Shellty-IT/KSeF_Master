@@ -1,12 +1,15 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import './Dashboard.css';
 import { getInvoices, type InvoiceMetadata } from '../../services/ksefApi';
 import { useAuth } from '../../hooks/useAuth';
 import KsefStatusAlerts from '../../components/features/ksef/KsefStatusAlerts';
 import SideNav from '../../components/layout/SideNav';
 import TopBar from '../../components/layout/TopBar';
+import {
+    Inbox, TrendingUp, BarChart3, FilePlus2, PenLine,
+    RefreshCw, Loader2,
+} from 'lucide-react';
 
 const CHART_DAYS = Array.from({ length: 14 }, (_, i) => ({
     day: i + 1,
@@ -16,6 +19,7 @@ const CHART_DAYS = Array.from({ length: 14 }, (_, i) => ({
 
 const BALANCE_ISSUED = CHART_DAYS.reduce((sum, d) => sum + d.issued, 0);
 const BALANCE_RECEIVED = CHART_DAYS.reduce((sum, d) => sum + d.received, 0);
+const CHART_MAX = Math.max(...CHART_DAYS.map((d) => Math.max(d.issued, d.received)));
 
 export default function Dashboard() {
     const { isKsefConnected, needsCompanySetup, user, nip } = useAuth();
@@ -65,139 +69,196 @@ export default function Dashboard() {
     }, [needsCompanySetup, isKsefConnected, user, nip]);
 
     return (
-        <div className="dash-root">
+        <div className="flex h-screen overflow-hidden bg-background">
             <SideNav />
-            <main className="dash-main">
+            <main className="flex flex-1 flex-col overflow-hidden">
                 <TopBar />
-                <div className="dash-content">
-                    <header className="dash-header">
-                        <h1>Pulpit Główny</h1>
-                        <p className="subtitle">{subtitleText}</p>
-                    </header>
+                <div className="flex-1 overflow-y-auto">
+                    <div className="mx-auto max-w-7xl space-y-6 p-8">
+                        {/* Header */}
+                        <header>
+                            <h1 className="text-2xl font-bold tracking-tight text-foreground">Pulpit główny</h1>
+                            <p className="mt-1 text-sm text-muted-foreground">{subtitleText}</p>
+                        </header>
 
-                    <KsefStatusAlerts
-                        needsCompanySetup={needsCompanySetup}
-                        isKsefConnected={isKsefConnected}
-                    />
+                        <KsefStatusAlerts
+                            needsCompanySetup={needsCompanySetup}
+                            isKsefConnected={isKsefConnected}
+                        />
 
-                    <section className="kpi-grid" aria-label="Szybka analiza">
-                        <div className="kpi-card">
-                            <div className="kpi-title">Faktury odebrane (ostatni miesiąc)</div>
-                            <div className="kpi-value accent">
-                                {!isKsefConnected ? '—' : isLoading ? '...' : stats.total}
-                            </div>
-                        </div>
-                        <div className="kpi-card">
-                            <div className="kpi-title">Suma brutto (odebrane)</div>
-                            <div className="kpi-value">
-                                {!isKsefConnected ? '—' : isLoading ? '...' : stats.totalGross.toLocaleString('pl-PL', {
-                                    style: 'currency',
-                                    currency: 'PLN',
-                                })}
-                            </div>
-                        </div>
-                        <div className="kpi-card wide">
-                            <div className="kpi-title">Saldo KSeF (Wystawione vs. Odebrane)</div>
-                            <div className="mini-chart" aria-hidden>
-                                {CHART_DAYS.map((d) => (
-                                    <div className="bar-pair" key={d.day}>
-                                        <div className="bar issued" style={{ height: Math.min(100, d.issued) + '%' }} />
-                                        <div className="bar received" style={{ height: Math.min(100, d.received) + '%' }} />
+                        {/* KPI grid */}
+                        <section aria-label="Szybka analiza" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {/* KPI: Faktury odebrane */}
+                            <div className="ks-card p-5">
+                                <div className="flex items-center justify-between">
+                                    <p className="ks-label">Faktury odebrane (ostatni miesiąc)</p>
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
+                                        <Inbox className="h-4 w-4 text-accent" />
                                     </div>
-                                ))}
+                                </div>
+                                <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">
+                                    {!isKsefConnected ? '—' : isLoading ? (
+                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                    ) : stats.total}
+                                </p>
                             </div>
-                            <div className="chart-legend">
-                                <span className="legend-item"><i className="dot issued" /> Wystawione: {BALANCE_ISSUED}</span>
-                                <span className="legend-item"><i className="dot received" /> Odebrane: {BALANCE_RECEIVED}</span>
+
+                            {/* KPI: Suma brutto */}
+                            <div className="ks-card p-5">
+                                <div className="flex items-center justify-between">
+                                    <p className="ks-label">Suma brutto (odebrane)</p>
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                                        <TrendingUp className="h-4 w-4 text-primary" />
+                                    </div>
+                                </div>
+                                <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">
+                                    {!isKsefConnected ? '—' : isLoading ? (
+                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                    ) : stats.totalGross.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' })}
+                                </p>
                             </div>
-                        </div>
-                    </section>
 
-                    <section className="ops-section">
-                        <div className="section-header-centered">
-                            <h2>Ostatnio Odebrane Dokumenty KSeF</h2>
-                            <button
-                                className="btn-fetch"
-                                onClick={() => refetch()}
-                                disabled={!isKsefConnected || isLoading || isFetching}
-                                title={!isKsefConnected ? 'Połącz się z KSeF, aby pobierać faktury' : ''}
-                            >
-                                <span className="btn-icon" aria-hidden>⟳</span>
-                                <span>{isLoading || isFetching ? 'Pobieranie...' : 'Pobierz z KSeF'}</span>
-                            </button>
-                        </div>
+                            {/* KPI: Mini chart */}
+                            <div className="ks-card p-5 sm:col-span-2 lg:col-span-1">
+                                <div className="flex items-center justify-between">
+                                    <p className="ks-label">Saldo KSeF (14 dni)</p>
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                                        <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                </div>
+                                <div className="mt-3 flex h-12 items-end gap-0.5" aria-hidden>
+                                    {CHART_DAYS.map((d) => (
+                                        <div key={d.day} className="flex flex-1 items-end gap-px">
+                                            <div
+                                                className="flex-1 rounded-sm bg-accent/70"
+                                                style={{ height: `${(d.issued / CHART_MAX) * 100}%` }}
+                                            />
+                                            <div
+                                                className="flex-1 rounded-sm bg-primary/40"
+                                                style={{ height: `${(d.received / CHART_MAX) * 100}%` }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-2 flex items-center gap-4 text-[11px] text-muted-foreground">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-sm bg-accent/70" />
+                                        Wystawione: {BALANCE_ISSUED}
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-sm bg-primary/40" />
+                                        Odebrane: {BALANCE_RECEIVED}
+                                    </span>
+                                </div>
+                            </div>
+                        </section>
 
-                        <div className="table-wrap">
-                            {isLoading && <div className="loading-overlay">Ładowanie...</div>}
-                            {errorMessage && <div className="error-message">{errorMessage}</div>}
-                            {!isLoading && !errorMessage && (
-                                <table className="data-table">
-                                    <thead>
-                                    <tr>
-                                        <th>Numer KSeF</th>
-                                        <th>Numer Faktury</th>
-                                        <th>Sprzedawca</th>
-                                        <th>NIP</th>
-                                        <th>Kwota Brutto</th>
-                                        <th>Data</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    {invoices.length > 0 ? (
-                                        invoices.slice(0, 10).map((row) => (
-                                            <tr key={row.ksefNumber}>
-                                                <td>{row.ksefNumber}</td>
-                                                <td>{row.invoiceNumber || '-'}</td>
-                                                <td>{row.seller?.name || '-'}</td>
-                                                <td>{row.seller?.nip || '-'}</td>
-                                                <td>
-                                                    {row.grossAmount?.toLocaleString('pl-PL', {
-                                                        style: 'currency',
-                                                        currency: row.currency || 'PLN',
-                                                    }) || '-'}
-                                                </td>
-                                                <td>{row.issueDate || '-'}</td>
+                        {/* Recent invoices table */}
+                        <section className="ks-card overflow-hidden">
+                            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+                                <h2 className="text-sm font-semibold text-foreground">Ostatnio odebrane dokumenty KSeF</h2>
+                                <button
+                                    className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[12px] font-medium text-foreground transition hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                                    onClick={() => refetch()}
+                                    disabled={!isKsefConnected || isLoading || isFetching}
+                                    title={!isKsefConnected ? 'Połącz się z KSeF, aby pobierać faktury' : ''}
+                                >
+                                    <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                                    {isLoading || isFetching ? 'Pobieranie...' : 'Pobierz z KSeF'}
+                                </button>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                {isLoading && (
+                                    <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Ładowanie...
+                                    </div>
+                                )}
+                                {errorMessage && (
+                                    <div className="px-6 py-4 text-sm text-destructive">{errorMessage}</div>
+                                )}
+                                {!isLoading && !errorMessage && (
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b border-border bg-muted/40">
+                                                <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Numer KSeF</th>
+                                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Numer faktury</th>
+                                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sprzedawca</th>
+                                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">NIP</th>
+                                                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Kwota brutto</th>
+                                                <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data</th>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={6} style={{ textAlign: 'center' }}>
-                                                {!isKsefConnected
-                                                    ? 'Połącz się z KSeF, aby pobrać faktury.'
-                                                    : 'Brak faktur do wyświetlenia.'}
-                                            </td>
-                                        </tr>
-                                    )}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
-                    </section>
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                            {invoices.length > 0 ? (
+                                                invoices.slice(0, 10).map((row) => (
+                                                    <tr key={row.ksefNumber} className="hover:bg-muted/30 transition-colors">
+                                                        <td className="px-6 py-3 font-mono text-[12px] text-muted-foreground">{row.ksefNumber}</td>
+                                                        <td className="px-4 py-3">{row.invoiceNumber || '—'}</td>
+                                                        <td className="px-4 py-3">{row.seller?.name || '—'}</td>
+                                                        <td className="px-4 py-3 font-mono text-[12px]">{row.seller?.nip || '—'}</td>
+                                                        <td className="px-4 py-3 text-right font-medium">
+                                                            {row.grossAmount?.toLocaleString('pl-PL', {
+                                                                style: 'currency',
+                                                                currency: row.currency || 'PLN',
+                                                            }) || '—'}
+                                                        </td>
+                                                        <td className="px-6 py-3 text-muted-foreground">{row.issueDate || '—'}</td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={6} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                                                        {!isKsefConnected
+                                                            ? 'Połącz się z KSeF, aby pobrać faktury.'
+                                                            : 'Brak faktur do wyświetlenia.'}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        </section>
 
-                    <section className="future-section">
-                        <h2>Szybkie Działania</h2>
-                        <div className="future-grid">
-                            <div
-                                className="future-card"
-                                onClick={() => navigate('/invoices/new')}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <div className="future-icon">📄</div>
-                                <div className="future-title">Wystaw fakturę</div>
-                                <div className="future-badge">Dostępne</div>
+                        {/* Quick actions */}
+                        <section>
+                            <h2 className="mb-4 text-sm font-semibold text-foreground">Szybkie działania</h2>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <button
+                                    className="ks-card flex items-center gap-3 p-4 text-left transition hover:shadow-[var(--shadow-elevated)] hover:-translate-y-px"
+                                    onClick={() => navigate('/invoices/new')}
+                                >
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
+                                        <FilePlus2 className="h-5 w-5 text-accent" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-foreground">Wystaw fakturę</p>
+                                        <p className="text-[11px] text-accent font-semibold">Dostępne</p>
+                                    </div>
+                                </button>
+                                <div className="ks-card flex items-center gap-3 p-4 opacity-50">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                                        <PenLine className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-foreground">Wprowadź korektę</p>
+                                        <p className="text-[11px] text-muted-foreground">Dostępne wkrótce</p>
+                                    </div>
+                                </div>
+                                <div className="ks-card flex items-center gap-3 p-4 opacity-50">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                                        <BarChart3 className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-foreground">Wygeneruj raport</p>
+                                        <p className="text-[11px] text-muted-foreground">Dostępne wkrótce</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="future-card">
-                                <div className="future-icon">✏️</div>
-                                <div className="future-title">Wprowadź Korektę</div>
-                                <div className="future-badge">Dostępne wkrótce</div>
-                            </div>
-                            <div className="future-card">
-                                <div className="future-icon">📊</div>
-                                <div className="future-title">Wygeneruj Raport</div>
-                                <div className="future-badge">Dostępne wkrótce</div>
-                            </div>
-                        </div>
-                    </section>
+                        </section>
+                    </div>
                 </div>
             </main>
         </div>

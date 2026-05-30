@@ -1,71 +1,150 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * KSeF Master — Design System
+ * Premium accounting / fintech aesthetic.
+ * Light content surfaces, deep navy sidebar, emerald accent for trust.
+ */
+
+@theme inline {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+
+  --shadow-card: 0 1px 2px oklch(0.2 0.04 250 / 0.04), 0 1px 3px oklch(0.2 0.04 250 / 0.04);
+  --shadow-elevated: 0 8px 24px -8px oklch(0.2 0.04 250 / 0.12), 0 2px 6px oklch(0.2 0.04 250 / 0.05);
+  --shadow-cta: 0 8px 20px -8px oklch(0.55 0.16 155 / 0.45);
+}
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --radius: 0.625rem;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Surfaces */
+  --background: oklch(0.985 0.004 250);
+  --foreground: oklch(0.18 0.03 250);
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.03 250);
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.03 250);
 
-html, body, #root {
-  height: 100%;
-}
+  /* Primary: deep navy */
+  --primary: oklch(0.24 0.06 255);
+  --primary-foreground: oklch(0.985 0.004 250);
 
-body {
-  margin: 0;
-  display: block;
-  min-width: 320px;
-  min-height: 100vh;
-}
+  --secondary: oklch(0.96 0.008 250);
+  --secondary-foreground: oklch(0.24 0.06 255);
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+  --muted: oklch(0.965 0.006 250);
+  --muted-foreground: oklch(0.5 0.02 250);
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  /* Accent: emerald */
+  --accent: oklch(0.62 0.15 158);
+  --accent-foreground: oklch(0.99 0.005 158);
+
+  --success: oklch(0.62 0.15 158);
+  --success-foreground: oklch(0.99 0.005 158);
+
+  --warning: oklch(0.74 0.15 75);
+  --warning-foreground: oklch(0.2 0.05 75);
+
+  --destructive: oklch(0.58 0.21 25);
+  --destructive-foreground: oklch(0.99 0.01 25);
+
+  --border: oklch(0.92 0.008 250);
+  --input: oklch(0.92 0.008 250);
+  --ring: oklch(0.62 0.15 158);
+
+  /* Sidebar: deep navy */
+  --sidebar: oklch(0.21 0.04 255);
+  --sidebar-foreground: oklch(0.96 0.01 250);
+  --sidebar-muted: oklch(0.7 0.02 250);
+  --sidebar-border: oklch(0.3 0.04 255);
+  --sidebar-accent: oklch(0.28 0.05 255);
+  --sidebar-accent-foreground: oklch(0.99 0.005 250);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer base {
+  * {
+    border-color: var(--color-border);
+    box-sizing: border-box;
   }
-  a:hover {
-    color: #747bff;
+
+  html, body, #root {
+    height: 100%;
   }
-  button {
-    background-color: #f9f9f9;
+
+  html, body {
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01", "ss03";
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    min-width: 320px;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .ks-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+  }
+  .ks-input {
+    @apply h-11 w-full rounded-md border border-input bg-card px-3.5 text-sm text-foreground
+           shadow-[inset_0_1px_0_oklch(1_0_0/0.6)]
+           placeholder:text-muted-foreground/70
+           focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition;
+  }
+  .ks-card {
+    @apply rounded-xl border border-border bg-card shadow-[var(--shadow-card)];
+  }
+  .ks-input-sm {
+    @apply h-8 w-full rounded-md border border-input bg-card px-2 py-1 text-sm text-foreground
+           placeholder:text-muted-foreground/70
+           focus:outline-none focus:ring-1 focus:ring-ring/40 focus:border-ring transition;
   }
 }
