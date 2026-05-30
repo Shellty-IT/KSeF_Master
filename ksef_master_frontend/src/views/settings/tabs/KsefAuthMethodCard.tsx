@@ -29,30 +29,23 @@ export default function KsefAuthMethodCard({
                 <p className="mt-0.5 text-[12px] text-muted-foreground">Zmień metodę łączenia się z systemem KSeF w dowolnym momencie.</p>
             </div>
 
-            <div className="space-y-2">
+            <div className="flex gap-2">
                 {[
-                    { value: 'token' as const, label: 'Token autoryzacyjny', desc: 'Standardowe uwierzytelnianie tokenem generowanym w systemie KSeF', Icon: Key, disabled: false },
-                    { value: 'certificate' as const, label: 'Certyfikat KSeF', desc: 'Uwierzytelnianie za pomocą certyfikatu wygenerowanego w systemie KSeF (XAdES)', Icon: ShieldCheck, disabled: !hasCertificate },
-                ].map(({ value, label, desc, Icon, disabled }) => (
+                    { value: 'token' as const, label: 'Token autoryzacyjny', Icon: Key, disabled: false },
+                    { value: 'certificate' as const, label: 'Certyfikat KSeF', Icon: ShieldCheck, disabled: !hasCertificate },
+                ].map(({ value, label, Icon, disabled }) => (
                     <label key={value}
-                        className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3.5 transition ${disabled ? 'cursor-not-allowed opacity-50' : ''} ${authMethod === value ? 'border-accent bg-accent/5' : 'border-border hover:bg-muted/40'}`}>
+                        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${disabled ? 'cursor-not-allowed opacity-50' : ''} ${authMethod === value ? 'border-accent bg-accent/10 text-accent font-medium' : 'border-border text-muted-foreground hover:bg-muted/40 hover:text-foreground'}`}>
                         <input type="radio" name="authMethod" value={value}
                             checked={authMethod === value}
                             onChange={() => onSwitchMethod(value)}
                             disabled={isSwitching || disabled}
                             className="sr-only" />
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-sm font-medium text-foreground">
-                                {label}
-                                {value === 'certificate' && !hasCertificate && (
-                                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">Wymaga przesłania</span>
-                                )}
-                            </p>
-                            <p className="text-[12px] text-muted-foreground">{desc}</p>
-                        </div>
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {label}
+                        {value === 'certificate' && !hasCertificate && (
+                            <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">Wymaga przesłania</span>
+                        )}
                     </label>
                 ))}
             </div>

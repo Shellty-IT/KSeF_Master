@@ -52,7 +52,7 @@
 
   --shadow-card: 0 1px 2px oklch(0.2 0.04 250 / 0.04), 0 1px 3px oklch(0.2 0.04 250 / 0.04);
   --shadow-elevated: 0 8px 24px -8px oklch(0.2 0.04 250 / 0.12), 0 2px 6px oklch(0.2 0.04 250 / 0.05);
-  --shadow-cta: 0 8px 20px -8px oklch(0.55 0.16 155 / 0.45);
+  --shadow-cta: 0 8px 20px -8px rgb(53 116 240 / 0.45);
 }
 
 :root {
@@ -78,9 +78,9 @@
   --muted: oklch(0.965 0.006 250);
   --muted-foreground: oklch(0.5 0.02 250);
 
-  /* Accent: emerald */
-  --accent: oklch(0.62 0.15 158);
-  --accent-foreground: oklch(0.99 0.005 158);
+  /* Accent: brand blue */
+  --accent: #3574F0;
+  --accent-foreground: #ffffff;
 
   --success: oklch(0.62 0.15 158);
   --success-foreground: oklch(0.99 0.005 158);
@@ -93,7 +93,7 @@
 
   --border: oklch(0.92 0.008 250);
   --input: oklch(0.92 0.008 250);
-  --ring: oklch(0.62 0.15 158);
+  --ring: #3574F0;
 
   /* Sidebar: deep navy */
   --sidebar: oklch(0.19 0.04 255);
@@ -131,7 +131,7 @@
 
 @layer components {
   .ks-label {
-    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+    @apply text-[12px] font-semibold text-foreground;
   }
   .ks-input {
     @apply h-11 w-full rounded-md border border-input bg-card px-3.5 text-sm text-foreground

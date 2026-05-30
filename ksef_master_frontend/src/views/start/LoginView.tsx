@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useServerHealth } from '../../hooks/useServerHealth';
 import { SHELLTY_HOMEPAGE_URL } from '../../constants/urls';
 import ServerStartup from '../../components/features/startup/ServerStartup';
-import { FileText, AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 export default function LoginView() {
     const navigate = useNavigate();
@@ -75,8 +75,8 @@ export default function LoginView() {
             <main className="w-full max-w-sm space-y-8">
                 {/* Brand */}
                 <header className="flex flex-col items-center gap-3 text-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-emerald-600 shadow-[var(--shadow-cta)]">
-                        <FileText className="h-6 w-6 text-white" strokeWidth={2.5} />
+                    <div className="flex h-14 w-14 items-center justify-center">
+                        <img src="/ico.svg" alt="KSeF Master" className="h-14 w-14" />
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-foreground">KSeF Master</h1>

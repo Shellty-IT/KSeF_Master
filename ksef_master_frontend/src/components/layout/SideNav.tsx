@@ -69,8 +69,8 @@ export default function SideNav() {
             {/* Brand */}
             <div className="px-4 pt-5 pb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-emerald-600 shadow-[var(--shadow-cta)] overflow-hidden">
-                        <img src="/ico.svg" alt="KSeF Master" className="h-7 w-7 object-contain" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+                        <img src="/ico.svg" alt="KSeF Master" className="h-9 w-9 object-contain" />
                     </div>
                     {!isCollapsed && (
                         <div className="min-w-0">

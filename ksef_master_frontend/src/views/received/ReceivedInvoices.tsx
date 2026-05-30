@@ -123,7 +123,7 @@ export default function ReceivedInvoices() {
                                     <select
                                         value={pageSize}
                                         onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                                        className="rounded-lg border border-border bg-card px-2 py-1.5 text-sm"
+                                        className="h-9 rounded-lg border border-border bg-card px-2 text-sm"
                                     >
                                         <option value={10}>10</option>
                                         <option value={25}>25</option>
