@@ -265,7 +265,28 @@ and fill in secrets. Alternatively: `dotnet user-secrets set "Jwt:Key" "..."`.
 
 ## Pending
 
-<!-- Fill in manually -->
+### Fixes / features to implement
+
+- **Cold start mitigation** — backend on Render free tier has cold starts;
+  implement a keep-alive solution (e.g. scheduled ping, upgrade to paid tier,
+  or a frontend warmup hook similar to Postlio's `useWarmup`)
+
+- **Suspicious invoice detection** — analyse collected invoice data to flag
+  anomalies: unusual amounts, VAT rates deviating from norm, duplicate
+  document numbers, sellers/buyers with no history, sudden spikes in value.
+  Add a fraud indicator badge and dedicated view.
+
+- **Invoice search & filter for fraud investigation** — allow operators to
+  filter/search invoices by arbitrary parameters (amount range, date range,
+  NIP, seller name, VAT rate, etc.) to support manual fraud investigation.
+
+- **Windows offline / local install** — desktop installer for Windows with an
+  embedded local database (SQLite or LocalDB); app must work without internet
+  access and store invoices locally.
+
+- **Deferred KSeF submission** — allow invoices to be saved locally and
+  submitted to the KSeF gateway later (when connectivity is restored or
+  operator decides to send).
 
 **Considerations (not yet decided):**
 - Verify EF Core migration `AddExternalDrafts` on Neon (production DB)
