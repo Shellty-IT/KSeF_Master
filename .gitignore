@@ -159,3 +159,4 @@ pnpm-debug.log*
 .history/
 .tmp/
 tmp/
+CLAUDE.md
