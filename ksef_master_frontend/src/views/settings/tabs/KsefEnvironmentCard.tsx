@@ -18,9 +18,9 @@ export default function KsefEnvironmentCard({
 }: Props) {
     return (
         <div className="ks-card p-5 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pb-3 mb-1 border-b border-[oklch(0.91_0.009_250)]">
                 <div className="flex items-center gap-2">
-                    <h3 className="ks-card-title">Środowisko KSeF</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Środowisko KSeF</h3>
                     <Badge variant={ksefEnvironment === 'Production' ? 'danger' : 'warning'} dot>
                         {ksefEnvironment === 'Production' ? 'PRODUKCJA' : 'TEST'}
                     </Badge>
