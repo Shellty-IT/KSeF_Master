@@ -35,7 +35,7 @@ export default function KsefAuthMethodCard({
                     { value: 'certificate' as const, label: 'Certyfikat KSeF', Icon: ShieldCheck, disabled: !hasCertificate },
                 ].map(({ value, label, Icon, disabled }) => (
                     <label key={value}
-                        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${disabled ? 'cursor-not-allowed opacity-50' : ''} ${authMethod === value ? 'border-accent bg-accent/10 text-accent font-medium' : 'border-border text-muted-foreground hover:bg-muted/40 hover:text-foreground'}`}>
+                        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${disabled ? 'cursor-not-allowed opacity-50' : ''} ${authMethod === value ? 'border-accent bg-accent/10 text-accent font-medium' : 'border-border text-foreground hover:bg-muted/40'}`}>
                         <input type="radio" name="authMethod" value={value}
                             checked={authMethod === value}
                             onChange={() => onSwitchMethod(value)}

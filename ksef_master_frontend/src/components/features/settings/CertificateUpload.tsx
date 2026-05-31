@@ -86,7 +86,7 @@ export default function CertificateUpload({ onSuccess }: CertificateUploadProps)
                         <ShieldCheck className="h-5 w-5 text-accent" />
                         <div>
                             <p className="text-sm font-medium text-foreground">Certyfikat zainstalowany</p>
-                            <p className="text-[12px] text-muted-foreground">Możesz połączyć się z KSeF używając certyfikatu kwalifikowanego</p>
+                            <p className="text-[12px] text-muted-foreground">Certyfikat pobrany z aplikacji KSeF gotowy do użycia</p>
                         </div>
                     </div>
 
