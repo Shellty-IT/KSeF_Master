@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { SHELLTY_HOMEPAGE_URL } from '../../constants/urls';
+import PrivacyPolicyModal from '../features/legal/PrivacyPolicyModal';
 import {
     FilePlus2, LayoutDashboard, Inbox, Send, Download,
     Users, BarChart3, Settings, LogOut, ShieldCheck,
@@ -31,6 +32,7 @@ export default function SideNav() {
 
     const navigate = useNavigate();
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [privacyOpen, setPrivacyOpen] = useState(false);
 
     function handleLogout() {
         logout();
@@ -221,19 +223,29 @@ export default function SideNav() {
                     {!isCollapsed && 'Wyloguj'}
                 </button>
                 {!isCollapsed && (
-                    <div className="mt-3 px-3 text-[11px] text-sidebar-muted">
-                        © 2026 KSeF Master – by{' '}
-                        <a
-                            href={SHELLTY_HOMEPAGE_URL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-accent hover:underline"
+                    <div className="mt-3 border-t border-sidebar-border/40 pt-3 px-3 space-y-0.5 text-center">
+                        <div className="text-[11px] text-sidebar-muted">
+                            © 2026 KSeF Master – by{' '}
+                            <a
+                                href={SHELLTY_HOMEPAGE_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-accent hover:underline"
+                            >
+                                Shellty
+                            </a>
+                        </div>
+                        <button
+                            onClick={() => setPrivacyOpen(true)}
+                            className="text-[11px] text-sidebar-muted hover:text-sidebar-foreground transition-colors hover:underline"
                         >
-                            Shellty
-                        </a>
+                            Polityka prywatności
+                        </button>
                     </div>
                 )}
             </div>
+
+            <PrivacyPolicyModal isOpen={privacyOpen} onClose={() => setPrivacyOpen(false)} />
         </aside>
     );
 }

@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useServerHealth } from '../../hooks/useServerHealth';
 import { SHELLTY_HOMEPAGE_URL } from '../../constants/urls';
 import ServerStartup from '../../components/features/startup/ServerStartup';
+import PrivacyPolicyModal from '../../components/features/legal/PrivacyPolicyModal';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
 export default function LoginView() {
@@ -15,6 +16,7 @@ export default function LoginView() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [privacyOpen, setPrivacyOpen] = useState(false);
 
     const emailValid = email.includes('@') && email.includes('.');
     const passwordValid = password.length >= 8;
@@ -148,18 +150,30 @@ export default function LoginView() {
                     </div>
                 </section>
 
-                <footer className="text-center text-[12px] text-muted-foreground">
-                    © 2026 KSeF Master — by{' '}
-                    <a
-                        href={SHELLTY_HOMEPAGE_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                    >
-                        Shellty
-                    </a>
+                <footer className="text-center text-[12px] text-muted-foreground space-y-1">
+                    <div>
+                        © 2026 KSeF Master — by{' '}
+                        <a
+                            href={SHELLTY_HOMEPAGE_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline"
+                        >
+                            Shellty
+                        </a>
+                    </div>
+                    <div>
+                        <button
+                            onClick={() => setPrivacyOpen(true)}
+                            className="hover:underline text-muted-foreground"
+                        >
+                            Polityka prywatności
+                        </button>
+                    </div>
                 </footer>
             </main>
+
+            <PrivacyPolicyModal isOpen={privacyOpen} onClose={() => setPrivacyOpen(false)} />
         </div>
     );
 }

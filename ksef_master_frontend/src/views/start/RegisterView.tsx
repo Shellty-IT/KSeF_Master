@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useServerHealth } from '../../hooks/useServerHealth';
 import ServerStartup from '../../components/features/startup/ServerStartup';
+import PrivacyPolicyModal from '../../components/features/legal/PrivacyPolicyModal';
 import { FileText, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function RegisterView() {
@@ -16,6 +17,7 @@ export default function RegisterView() {
     const [passwordConfirm, setPasswordConfirm] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [privacyOpen, setPrivacyOpen] = useState(false);
 
     const nameValid = name.trim().length >= 2;
     const emailValid = email.includes('@') && email.includes('.');
@@ -196,10 +198,22 @@ export default function RegisterView() {
                     </div>
                 </section>
 
-                <footer className="text-center text-[12px] text-muted-foreground">
-                    © 2026 KSeF Master — Środowisko testowe
+                <footer className="text-center text-[12px] text-muted-foreground space-y-1">
+                    <div>
+                        Rejestrując się, akceptujesz{' '}
+                        <button
+                            type="button"
+                            onClick={() => setPrivacyOpen(true)}
+                            className="hover:underline text-muted-foreground font-medium"
+                        >
+                            Politykę prywatności
+                        </button>
+                    </div>
+                    <div>© 2026 KSeF Master</div>
                 </footer>
             </main>
+
+            <PrivacyPolicyModal isOpen={privacyOpen} onClose={() => setPrivacyOpen(false)} />
         </div>
     );
 }
