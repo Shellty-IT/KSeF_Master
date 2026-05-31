@@ -69,7 +69,7 @@ export default function TabFraudDetection() {
 
                         {alertSettings.duplicateDetectionEnabled && (
                             <div className="flex items-center gap-3 text-sm">
-                                <label className="text-muted-foreground" htmlFor="fd-dup-days">Okno czasowe (dni)</label>
+                                <label className="ks-label" htmlFor="fd-dup-days">Okno czasowe (dni)</label>
                                 <input id="fd-dup-days" type="number" min={1} max={30} className="ks-input w-24"
                                     value={alertSettings.duplicateWindowDays}
                                     onChange={(e) => setAlertSettings((s) => ({ ...s, duplicateWindowDays: Number(e.target.value) }))} />

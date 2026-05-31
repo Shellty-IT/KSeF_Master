@@ -114,19 +114,17 @@ export default function IssuedInvoices() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    Na stronę:
-                                    <select
-                                        value={pageSize}
-                                        onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                                        className="h-9 rounded-lg border border-border bg-card px-2 text-sm"
-                                    >
-                                        <option value={10}>10</option>
-                                        <option value={25}>25</option>
-                                        <option value={50}>50</option>
-                                        <option value={100}>100</option>
-                                    </select>
-                                </label>
+                                <span className="text-sm text-muted-foreground">Na stronę:</span>
+                                <select
+                                    value={pageSize}
+                                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                                    className="h-9 rounded-lg border border-border bg-card px-2 text-sm"
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={25}>25</option>
+                                    <option value={50}>50</option>
+                                    <option value={100}>100</option>
+                                </select>
                                 <PrimaryButton onClick={sync} disabled={!isKsefConnected || isSyncing}>
                                     {isSyncing ? <><Loader2 className="h-4 w-4 animate-spin" />Synchronizacja...</> : 'Synchronizuj z KSeF'}
                                 </PrimaryButton>
