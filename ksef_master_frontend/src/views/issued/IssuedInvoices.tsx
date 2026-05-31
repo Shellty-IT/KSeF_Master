@@ -143,21 +143,21 @@ export default function IssuedInvoices() {
                                 {errorMessage && <div className="px-6 py-4 text-sm text-destructive">{errorMessage}</div>}
                                 {!isLoading && !errorMessage && (
                                     <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b border-border bg-muted/40">
+                                        <thead className="ks-table-header">
+                                            <tr>
                                                 <th className="px-4 py-3 text-left">
                                                     <input type="checkbox"
                                                         checked={selection.isAllSelected && paged.length > 0}
                                                         onChange={toggleSelectAll} title="Zaznacz wszystkie"
                                                         className="rounded" />
                                                 </th>
-                                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data</th>
-                                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nr KSeF</th>
-                                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nr faktury</th>
-                                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">NIP nabywcy</th>
-                                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nazwa</th>
-                                                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Brutto</th>
-                                                <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">PDF</th>
+                                                <th>Data</th>
+                                                <th>Nr KSeF</th>
+                                                <th>Nr faktury</th>
+                                                <th>NIP nabywcy</th>
+                                                <th>Nazwa</th>
+                                                <th className="text-right">Brutto</th>
+                                                <th className="text-center">PDF</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">

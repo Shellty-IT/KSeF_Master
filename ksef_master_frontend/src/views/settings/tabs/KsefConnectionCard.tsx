@@ -1,4 +1,4 @@
-import { Plug, Unplug, Loader2, Key, ShieldCheck, AlertCircle } from 'lucide-react';
+﻿import { Plug, Unplug, Loader2, Key, ShieldCheck, AlertCircle } from 'lucide-react';
 
 interface Props {
     isKsefConnected: boolean;
@@ -14,7 +14,7 @@ export default function KsefConnectionCard({
 }: Props) {
     return (
         <div className="ks-card p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-foreground">Status połączenia z KSeF</h3>
+            <h3 className="ks-card-title">Status połączenia z KSeF</h3>
             <div className="flex gap-8">
                 <div>
                     <p className="ks-label mb-1">Status</p>

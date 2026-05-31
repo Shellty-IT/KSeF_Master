@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
 import { getSettings, saveSettings, type AppSettings } from '../../../services/settings';
 import { Save, FileText, QrCode, Server } from 'lucide-react';
@@ -24,7 +24,7 @@ export default function TabPrintPdf() {
 
             <div className="ks-card p-5 space-y-4">
                 <div>
-                    <h3 className="text-sm font-semibold text-foreground">Ustawienia druku i PDF</h3>
+                    <h3 className="ks-card-title">Ustawienia druku i PDF</h3>
                     <p className="mt-0.5 text-[12px] text-muted-foreground">Parametry wpływające na wygląd wydruków i generowanych plików PDF.</p>
                 </div>
 
@@ -54,7 +54,7 @@ export default function TabPrintPdf() {
             </div>
 
             <div className="ks-card p-5 space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Informacje o generowaniu PDF</h3>
+                <h3 className="ks-card-title">Informacje o generowaniu PDF</h3>
                 <div className="space-y-3">
                     {[
                         { Icon: FileText, title: 'Format A4, orientacja pionowa', desc: 'Faktury generowane są w standardowym formacie A4' },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
 import { getSettings, saveSettings, type AppSettings, type PaymentMethod } from '../../../services/settings';
 import { Save } from 'lucide-react';
@@ -24,7 +24,7 @@ export default function TabInvoiceDefaults() {
 
             <div className="ks-card p-5 space-y-4">
                 <div>
-                    <h3 className="text-sm font-semibold text-foreground">Domyślne parametry faktur</h3>
+                    <h3 className="ks-card-title">Domyślne parametry faktur</h3>
                     <p className="mt-0.5 text-[12px] text-muted-foreground">Wartości wstępnie wypełniające formularz nowej faktury. Możesz je zmienić przy każdej fakturze.</p>
                 </div>
 

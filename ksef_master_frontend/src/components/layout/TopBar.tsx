@@ -28,7 +28,7 @@ export default function TopBar() {
         : 'Środowisko testowe KSeF 2.0';
 
     return (
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card/60 px-8 backdrop-blur">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-8 shadow-[var(--shadow-topbar)]">
             <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
                 <span className="font-mono">PL</span>
                 <span>·</span>

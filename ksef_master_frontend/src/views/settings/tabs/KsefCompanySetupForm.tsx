@@ -1,4 +1,4 @@
-import type { ChangeEvent } from 'react';
+﻿import type { ChangeEvent } from 'react';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
 import { Key, ShieldCheck, CheckCircle2, Loader2 } from 'lucide-react';
 
@@ -29,7 +29,7 @@ export default function KsefCompanySetupForm({
             {/* Company data */}
             <div className="ks-card p-5 space-y-4">
                 <div>
-                    <h3 className="text-sm font-semibold text-foreground">Konfiguracja firmy</h3>
+                    <h3 className="ks-card-title">Konfiguracja firmy</h3>
                     <p className="mt-0.5 text-[12px] text-muted-foreground">Podaj dane firmy i wybierz metodę uwierzytelniania z systemem KSeF.</p>
                 </div>
                 <div className="space-y-1.5">
@@ -49,7 +49,7 @@ export default function KsefCompanySetupForm({
             {/* Environment */}
             <div className="ks-card p-5 space-y-4">
                 <div>
-                    <h3 className="text-sm font-semibold text-foreground">Środowisko KSeF</h3>
+                    <h3 className="ks-card-title">Środowisko KSeF</h3>
                     <p className="mt-0.5 text-[12px] text-muted-foreground">
                         <strong className="text-warning-foreground">UWAGA:</strong> Środowisko produkcyjne służy do wystawiania faktur o pełnej mocy prawnej.
                     </p>
@@ -77,7 +77,7 @@ export default function KsefCompanySetupForm({
             {/* Auth method */}
             <div className="ks-card p-5 space-y-4">
                 <div>
-                    <h3 className="text-sm font-semibold text-foreground">Metoda uwierzytelniania KSeF</h3>
+                    <h3 className="ks-card-title">Metoda uwierzytelniania KSeF</h3>
                     <p className="mt-0.5 text-[12px] text-muted-foreground">Możesz ją zmienić później.</p>
                 </div>
                 <div className="space-y-2">

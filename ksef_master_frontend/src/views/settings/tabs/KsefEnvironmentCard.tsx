@@ -1,4 +1,4 @@
-import { Pencil, Loader2, Save } from 'lucide-react';
+﻿import { Pencil, Loader2, Save } from 'lucide-react';
 import { Badge } from '../../../components/ui/Badge';
 
 interface Props {
@@ -20,7 +20,7 @@ export default function KsefEnvironmentCard({
         <div className="ks-card p-5 space-y-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-foreground">Środowisko KSeF</h3>
+                    <h3 className="ks-card-title">Środowisko KSeF</h3>
                     <Badge variant={ksefEnvironment === 'Production' ? 'danger' : 'warning'} dot>
                         {ksefEnvironment === 'Production' ? 'PRODUKCJA' : 'TEST'}
                     </Badge>

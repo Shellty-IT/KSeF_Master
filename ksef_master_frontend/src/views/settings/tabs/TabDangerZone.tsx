@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+﻿import { useState, type ChangeEvent } from 'react';
 import { Download, Upload, Trash2, AlertTriangle, Info } from 'lucide-react';
 
 export default function TabDangerZone() {
@@ -50,7 +50,7 @@ export default function TabDangerZone() {
             {info && <div className="rounded-lg border border-accent/20 bg-accent/10 px-4 py-2.5 text-sm text-accent">{info}</div>}
 
             <div className="ks-card p-5 space-y-4">
-                <h3 className="text-sm font-semibold text-foreground">Kopia zapasowa ustawień</h3>
+                <h3 className="ks-card-title">Kopia zapasowa ustawień</h3>
                 <p className="text-[12px] text-muted-foreground">Eksportuj i importuj wszystkie ustawienia aplikacji przechowywane lokalnie w przeglądarce. Kopia zawiera dane sprzedawcy, ustawienia faktur, alerty i konfigurację druku.</p>
 
                 <div className="flex items-start gap-2.5 rounded-lg border border-primary/15 bg-primary/5 px-4 py-3 text-[12px] text-primary">
@@ -73,7 +73,7 @@ export default function TabDangerZone() {
             <div className="ks-card border-destructive/20 p-5 space-y-4">
                 <div className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-destructive" />
-                    <h3 className="text-sm font-semibold text-foreground">Strefa ryzyka</h3>
+                    <h3 className="ks-card-title">Strefa ryzyka</h3>
                 </div>
                 <p className="text-[12px] text-muted-foreground">
                     Operacje poniżej są <strong className="text-destructive">nieodwracalne</strong>. Wykonaj kopię zapasową przed czyszczeniem danych.

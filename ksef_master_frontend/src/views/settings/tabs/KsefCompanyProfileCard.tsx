@@ -1,4 +1,4 @@
-import type { UserInfo } from '../../../types/auth';
+﻿import type { UserInfo } from '../../../types/auth';
 import { Pencil, Loader2, Save } from 'lucide-react';
 
 interface Props {
@@ -21,7 +21,7 @@ export default function KsefCompanyProfileCard({
     return (
         <div className="ks-card p-5 space-y-4">
             <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">Dane firmy</h3>
+                <h3 className="ks-card-title">Dane firmy</h3>
                 {!isEditing && (
                     <button className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[12px] transition hover:bg-secondary"
                         onClick={() => setIsEditing(true)}>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
 import { getAlertSettings, saveAlertSettings, clearDismissedAlerts } from '../../../services/fraudDetection';
 import type { AlertSettings } from '../../../types/fraud';
@@ -34,7 +34,7 @@ export default function TabFraudDetection() {
 
             <div className="ks-card p-5 space-y-4">
                 <div>
-                    <h3 className="text-sm font-semibold text-foreground">Wykrywanie podejrzanych faktur</h3>
+                    <h3 className="ks-card-title">Wykrywanie podejrzanych faktur</h3>
                     <p className="mt-0.5 text-[12px] text-muted-foreground">System automatycznie analizuje faktury odebrane i oznacza te, które wymagają uwagi.</p>
                 </div>
 
@@ -108,7 +108,7 @@ export default function TabFraudDetection() {
 
             {alertSettings.enabled && (
                 <div className="ks-card p-5 space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground">Zarządzanie alertami</h3>
+                    <h3 className="ks-card-title">Zarządzanie alertami</h3>
                     <p className="text-[12px] text-muted-foreground">Alerty zignorowane przez użytkownika nie będą ponownie wyświetlane, dopóki nie zostaną przywrócone.</p>
                     <button className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-4 py-2 text-sm transition hover:bg-secondary"
                         onClick={handleClearDismissed}>

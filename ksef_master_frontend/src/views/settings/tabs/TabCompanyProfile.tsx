@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import PrimaryButton from '../../../components/ui/PrimaryButton';
 import BankAccountInput from '../../../components/ui/BankAccountInput';
@@ -48,7 +48,7 @@ export default function TabCompanyProfile() {
             )}
 
             <div className="ks-card p-5 space-y-4">
-                <h3 className="text-sm font-semibold text-foreground">Dane rejestrowe firmy</h3>
+                <h3 className="ks-card-title">Dane rejestrowe firmy</h3>
 
                 {user?.company ? (
                     <div className="flex gap-8 rounded-lg border border-primary/15 bg-primary/5 px-4 py-3">

@@ -6,7 +6,7 @@
 /*
  * KSeF Master — Design System
  * Premium accounting / fintech aesthetic.
- * Light content surfaces, deep navy sidebar, emerald accent for trust.
+ * Structured surfaces with clear visual hierarchy.
  */
 
 @theme inline {
@@ -50,16 +50,17 @@
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
 
-  --shadow-card: 0 1px 2px oklch(0.2 0.04 250 / 0.04), 0 1px 3px oklch(0.2 0.04 250 / 0.04);
-  --shadow-elevated: 0 8px 24px -8px oklch(0.2 0.04 250 / 0.12), 0 2px 6px oklch(0.2 0.04 250 / 0.05);
+  --shadow-card: 0 1px 3px oklch(0.2 0.04 250 / 0.08), 0 1px 6px oklch(0.2 0.04 250 / 0.06);
+  --shadow-elevated: 0 8px 24px -8px oklch(0.2 0.04 250 / 0.18), 0 2px 8px oklch(0.2 0.04 250 / 0.08);
   --shadow-cta: 0 8px 20px -8px rgb(53 116 240 / 0.45);
+  --shadow-topbar: 0 1px 0 oklch(0.2 0.04 250 / 0.08), 0 2px 8px oklch(0.2 0.04 250 / 0.05);
 }
 
 :root {
   --radius: 0.625rem;
 
   /* Surfaces */
-  --background: oklch(0.985 0.004 250);
+  --background: oklch(0.955 0.008 250);
   --foreground: oklch(0.18 0.03 250);
 
   --card: oklch(1 0 0);
@@ -75,8 +76,8 @@
   --secondary: oklch(0.96 0.008 250);
   --secondary-foreground: oklch(0.24 0.06 255);
 
-  --muted: oklch(0.965 0.006 250);
-  --muted-foreground: oklch(0.28 0.02 250);
+  --muted: oklch(0.96 0.006 250);
+  --muted-foreground: oklch(0.38 0.02 250);
 
   /* Accent: brand blue */
   --accent: #3574F0;
@@ -91,8 +92,8 @@
   --destructive: oklch(0.58 0.21 25);
   --destructive-foreground: oklch(0.99 0.01 25);
 
-  --border: oklch(0.92 0.008 250);
-  --input: oklch(0.92 0.008 250);
+  --border: oklch(0.88 0.01 250);
+  --input: oklch(0.88 0.01 250);
   --ring: #3574F0;
 
   /* Sidebar: deep navy */
@@ -142,6 +143,23 @@
   }
   .ks-card {
     @apply rounded-xl border border-border bg-card shadow-[var(--shadow-card)];
+    border-color: oklch(0.88 0.01 250);
+  }
+  .ks-card-title {
+    @apply text-sm font-semibold text-foreground pb-3 mb-3;
+    border-bottom: 1px solid oklch(0.91 0.009 250);
+  }
+  .ks-section-header {
+    @apply flex items-center justify-between border-b border-border px-6 py-4;
+    background: linear-gradient(to right, oklch(0.97 0.012 250), oklch(1 0 0));
+  }
+  .ks-table-header {
+    @apply border-b border-border;
+    background: oklch(0.96 0.01 250);
+  }
+  .ks-table-header th {
+    @apply px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider;
+    color: oklch(0.35 0.04 255);
   }
   .ks-input-sm {
     @apply h-8 w-full rounded-md border border-input bg-card px-2 py-1 text-sm text-foreground

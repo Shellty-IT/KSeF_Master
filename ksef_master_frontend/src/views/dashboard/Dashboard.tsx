@@ -89,7 +89,7 @@ export default function Dashboard() {
                         {/* KPI grid */}
                         <section aria-label="Szybka analiza" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {/* KPI: Faktury odebrane */}
-                            <div className="ks-card p-5">
+                            <div className="ks-card p-5 border-l-4 border-l-accent">
                                 <div className="flex items-center justify-between">
                                     <p className="ks-label">Faktury odebrane (ostatni miesiąc)</p>
                                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
@@ -104,7 +104,7 @@ export default function Dashboard() {
                             </div>
 
                             {/* KPI: Suma brutto */}
-                            <div className="ks-card p-5">
+                            <div className="ks-card p-5 border-l-4" style={{borderLeftColor: 'oklch(0.24 0.06 255)'}}>
                                 <div className="flex items-center justify-between">
                                     <p className="ks-label">Suma brutto (odebrane)</p>
                                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -119,7 +119,7 @@ export default function Dashboard() {
                             </div>
 
                             {/* KPI: Mini chart */}
-                            <div className="ks-card p-5 sm:col-span-2 lg:col-span-1">
+                            <div className="ks-card p-5 sm:col-span-2 lg:col-span-1 border-l-4" style={{borderLeftColor: 'oklch(0.62 0.15 158)'}}>
                                 <div className="flex items-center justify-between">
                                     <p className="ks-label">Saldo KSeF (14 dni)</p>
                                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
@@ -155,7 +155,7 @@ export default function Dashboard() {
 
                         {/* Recent invoices table */}
                         <section className="ks-card overflow-hidden">
-                            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+                            <div className="ks-section-header">
                                 <h2 className="text-sm font-semibold text-foreground">Ostatnio odebrane dokumenty KSeF</h2>
                                 <button
                                     className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[12px] font-medium text-foreground transition hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
@@ -180,14 +180,14 @@ export default function Dashboard() {
                                 )}
                                 {!isLoading && !errorMessage && (
                                     <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b border-border bg-muted/40">
-                                                <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Numer KSeF</th>
-                                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Numer faktury</th>
-                                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sprzedawca</th>
-                                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">NIP</th>
-                                                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Kwota brutto</th>
-                                                <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data</th>
+                                        <thead className="ks-table-header">
+                                            <tr>
+                                                <th>Numer KSeF</th>
+                                                <th>Numer faktury</th>
+                                                <th>Sprzedawca</th>
+                                                <th>NIP</th>
+                                                <th className="text-right">Kwota brutto</th>
+                                                <th>Data</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">

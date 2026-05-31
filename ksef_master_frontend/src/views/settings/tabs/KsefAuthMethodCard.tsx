@@ -1,4 +1,4 @@
-import CertificateUpload from '../../../components/features/settings/CertificateUpload';
+﻿import CertificateUpload from '../../../components/features/settings/CertificateUpload';
 import { Key, ShieldCheck, Pencil, Loader2, Save } from 'lucide-react';
 
 interface Props {
@@ -25,7 +25,7 @@ export default function KsefAuthMethodCard({
     return (
         <div className="ks-card p-5 space-y-5">
             <div>
-                <h3 className="text-sm font-semibold text-foreground">Metoda uwierzytelniania</h3>
+                <h3 className="ks-card-title">Metoda uwierzytelniania</h3>
                 <p className="mt-0.5 text-[12px] text-muted-foreground">Zmień metodę łączenia się z systemem KSeF w dowolnym momencie.</p>
             </div>
 

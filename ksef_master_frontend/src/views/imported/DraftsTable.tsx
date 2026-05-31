@@ -88,10 +88,10 @@ export default function DraftsTable({
                     )}
                     {!isLoading && !error && (
                         <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-border bg-muted/40">
+                            <thead className="ks-table-header">
+                                <tr>
                                     {['Nr oferty', 'Nabywca', 'Data wystawienia', 'Termin płatności', 'Kwota brutto', 'Status', 'Data importu', 'Akcje'].map((h) => (
-                                        <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{h}</th>
+                                        <th key={h}>{h}</th>
                                     ))}
                                 </tr>
                             </thead>
