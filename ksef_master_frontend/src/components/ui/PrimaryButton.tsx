@@ -12,7 +12,7 @@ export default function PrimaryButton({
 }: PropsWithChildren<Props>) {
     return (
         <button
-            className={`inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-cta)] transition hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+            className={`inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-cta)] transition hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
             {...rest}
         >
             {icon && <span aria-hidden>{icon}</span>}

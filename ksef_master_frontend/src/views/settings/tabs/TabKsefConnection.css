@@ -29,14 +29,13 @@
 
 .ksef-meta-label {
     font-size: 11px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
-
 .ksef-meta-value {
     font-size: 14px;
-    color: var(--text);
+    color: var(--foreground);
     font-weight: 600;
     margin-top: 4px;
 }
@@ -55,14 +54,14 @@
 /* ── Shared button modifiers ── */
 .btn-save {
     background: var(--accent);
-    color: #001018;
+    color: #ffffff;
     border: none;
     font-weight: 700;
 }
 
 .btn-disconnect {
-    background: rgba(239, 68, 68, 0.15);
-    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--destructive);
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
@@ -78,13 +77,13 @@
 }
 
 .env-badge--production {
-    background: rgba(239, 68, 68, 0.15);
-    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--destructive);
 }
 
 .env-badge--test {
-    background: rgba(245, 158, 11, 0.15);
-    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-foreground);
 }
 
 /* ── Connection status values ── */
@@ -99,7 +98,7 @@
 }
 
 .ksef-status-value--disconnected {
-    color: var(--danger);
+    color: var(--destructive);
 }
 
 .ksef-method-value {
@@ -116,7 +115,7 @@
     border: 1px solid rgba(239, 68, 68, 0.3);
     border-radius: 8px;
     padding: 12px;
-    color: #fca5a5;
+    color: var(--destructive);
     font-size: 14px;
     margin-bottom: 16px;
     margin-top: 8px;
@@ -146,7 +145,7 @@
 .ksef-section-title {
     font-size: 14px;
     font-weight: 600;
-    color: var(--text);
+    color: var(--foreground);
     margin: 0 0 12px;
 }
 
@@ -188,5 +187,5 @@
 
 /* ── Danger description text ── */
 .auth-method-description--danger {
-    color: #fca5a5;
+    color: var(--destructive);
 }
