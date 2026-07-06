@@ -61,6 +61,16 @@ public class CreateInvoiceRequestValidatorTests
     }
 
     [Fact]
+    public void Invalid_issue_date_format_fails()
+    {
+        var req = Valid();
+        req.IssueDate = "2025-13-45";
+        var result = _sut.Validate(req);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.ErrorMessage == "Data wystawienia musi być w formacie RRRR-MM-DD");
+    }
+
+    [Fact]
     public void Null_seller_fails()
     {
         var req = Valid();

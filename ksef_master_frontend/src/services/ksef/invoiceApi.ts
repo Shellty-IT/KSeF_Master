@@ -104,13 +104,17 @@ export interface CachedInvoicesResponse {
     };
 }
 
-export async function getInvoices(request: InvoiceQueryRequest): Promise<InvoiceQueryResponse> {
+// Note: the backend's POST /invoices route is cache-only — it returns the same flat
+// CachedInvoice shape as GET /invoices/cached (filtered by subjectType/dateRange), not the
+// nested InvoiceMetadata shape used by the live KSeF query flow. Keep this return type in
+// sync with what KSeFInvoiceController.GetInvoices actually serializes.
+export async function getInvoices(request: InvoiceQueryRequest): Promise<CachedInvoicesResponse> {
     try {
-        const response = await ksefHttpClient.post<InvoiceQueryResponse>('/invoices', request);
+        const response = await ksefHttpClient.post<CachedInvoicesResponse>('/invoices', request);
         return response.data;
     } catch (error) {
         if (error instanceof AxiosError && error.response) {
-            return error.response.data as InvoiceQueryResponse;
+            return error.response.data as CachedInvoicesResponse;
         }
         throw error;
     }

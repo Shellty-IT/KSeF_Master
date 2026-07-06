@@ -43,6 +43,20 @@ public class KSeFInvoiceQueryService : IKSeFInvoiceQueryService
         return await _invoiceRepository.GetByCompanyProfileIdAsync(companyProfileId);
     }
 
+    public async Task<List<Models.Data.Invoice>> GetCachedInvoicesAsync(int companyProfileId, InvoiceQueryRequest filter)
+    {
+        var invoices = await _invoiceRepository.GetByCompanyProfileIdAsync(companyProfileId);
+
+        var direction = filter.SubjectType == "Subject2" ? "received" : "issued";
+        var from = filter.DateRange.From;
+        var to = filter.DateRange.To;
+
+        return invoices
+            .Where(i => i.Direction == direction)
+            .Where(i => !i.InvoiceDate.HasValue || (i.InvoiceDate.Value >= from && i.InvoiceDate.Value <= to))
+            .ToList();
+    }
+
     public async Task<InvoiceQueryResponse> QueryInvoicesAsync(
         InvoiceQueryRequest request,
         CancellationToken cancellationToken = default)

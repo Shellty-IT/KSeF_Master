@@ -23,7 +23,12 @@ function attachUnauthorizedRedirect(client: AxiosInstance): void {
                 const publicPaths = ['#/login', '#/register', '#/'];
                 if (!publicPaths.includes(currentPath)) {
                     tokenStorage.clear();
+                    // Full reload (not just a hash change) so AuthContext re-initializes from
+                    // the now-empty token storage. Otherwise its in-memory isAppAuthenticated
+                    // stays stale/true and LoginView immediately navigates back to /dashboard,
+                    // causing a login/dashboard redirect loop.
                     window.location.hash = '#/login';
+                    window.location.reload();
                 }
             }
             return Promise.reject(error);

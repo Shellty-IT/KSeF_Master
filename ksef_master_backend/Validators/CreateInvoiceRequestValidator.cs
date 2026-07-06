@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using System.Globalization;
+using FluentValidation;
 using KSeF.Backend.Models.Requests;
 
 namespace KSeF.Backend.Validators;
@@ -11,10 +12,12 @@ public class CreateInvoiceRequestValidator : AbstractValidator<CreateInvoiceRequ
             .NotEmpty().WithMessage("Numer faktury jest wymagany");
 
         RuleFor(x => x.IssueDate)
-            .NotEmpty().WithMessage("Data wystawienia jest wymagana");
+            .NotEmpty().WithMessage("Data wystawienia jest wymagana")
+            .Must(BeAValidDate).WithMessage("Data wystawienia musi być w formacie RRRR-MM-DD");
 
         RuleFor(x => x.SaleDate)
-            .NotEmpty().WithMessage("Data sprzedaży jest wymagana");
+            .NotEmpty().WithMessage("Data sprzedaży jest wymagana")
+            .Must(BeAValidDate).WithMessage("Data sprzedaży musi być w formacie RRRR-MM-DD");
 
         RuleFor(x => x.Seller)
             .NotNull().WithMessage("Dane sprzedawcy są wymagane");
@@ -61,4 +64,7 @@ public class CreateInvoiceRequestValidator : AbstractValidator<CreateInvoiceRequ
                 .GreaterThanOrEqualTo(0).WithMessage("Cena nie może być ujemna");
         });
     }
+
+    private static bool BeAValidDate(string date) =>
+        DateTime.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
 }
