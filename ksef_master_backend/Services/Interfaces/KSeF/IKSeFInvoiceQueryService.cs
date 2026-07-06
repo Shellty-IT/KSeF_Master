@@ -12,4 +12,6 @@ public interface IKSeFInvoiceQueryService
         CancellationToken cancellationToken = default);
 
     Task<List<InvoiceModel>> GetCachedInvoicesAsync(int companyProfileId);
+
+    Task<List<InvoiceModel>> GetCachedInvoicesAsync(int companyProfileId, InvoiceQueryRequest filter);
 }

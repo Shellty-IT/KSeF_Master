@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { getInvoices, type InvoiceMetadata } from '../../services/ksefApi';
+import { getInvoices, type CachedInvoice } from '../../services/ksefApi';
 import { useAuth } from '../../hooks/useAuth';
 import KsefStatusAlerts from '../../components/features/ksef/KsefStatusAlerts';
 import SideNav from '../../components/layout/SideNav';
@@ -11,34 +11,43 @@ import {
     RefreshCw, Loader2,
 } from 'lucide-react';
 
-const CHART_DAYS = Array.from({ length: 14 }, (_, i) => ({
-    day: i + 1,
-    issued: Math.round(10 + 20 * Math.sin(i / 2) + (i % 3) * 3),
-    received: Math.round(8 + 18 * Math.cos(i / 3) + (i % 4)),
-}));
+const CHART_DAY_COUNT = 14;
 
-const BALANCE_ISSUED = CHART_DAYS.reduce((sum, d) => sum + d.issued, 0);
-const BALANCE_RECEIVED = CHART_DAYS.reduce((sum, d) => sum + d.received, 0);
-const CHART_MAX = Math.max(...CHART_DAYS.map((d) => Math.max(d.issued, d.received)));
+function buildDailyCounts(invoices: CachedInvoice[]): number[] {
+    const counts = new Array(CHART_DAY_COUNT).fill(0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const inv of invoices) {
+        if (!inv.invoiceDate) continue;
+        const date = new Date(inv.invoiceDate);
+        date.setHours(0, 0, 0, 0);
+        const dayIndex = CHART_DAY_COUNT - 1 - Math.round((today.getTime() - date.getTime()) / 86_400_000);
+        if (dayIndex >= 0 && dayIndex < CHART_DAY_COUNT) {
+            counts[dayIndex] += 1;
+        }
+    }
+
+    return counts;
+}
 
 export default function Dashboard() {
     const { isKsefConnected, needsCompanySetup, user, nip } = useAuth();
     const navigate = useNavigate();
 
+    const dateRange = useMemo(() => {
+        const now = new Date();
+        const from = new Date(now);
+        from.setMonth(from.getMonth() - 1);
+        return { from: from.toISOString(), to: now.toISOString() };
+    }, []);
+
     const { data: receivedData, isLoading, isFetching, error, refetch } = useQuery({
         queryKey: ['receivedInvoices', nip],
         queryFn: async () => {
-            const now = new Date();
-            const from = new Date(now);
-            from.setMonth(from.getMonth() - 1);
-
             const response = await getInvoices({
                 subjectType: 'Subject2',
-                dateRange: {
-                    dateType: 'PermanentStorage',
-                    from: from.toISOString(),
-                    to: now.toISOString(),
-                },
+                dateRange: { dateType: 'PermanentStorage', ...dateRange },
             });
 
             if (!response.success) {
@@ -51,7 +60,26 @@ export default function Dashboard() {
         staleTime: 60_000,
     });
 
-    const invoices: InvoiceMetadata[] = useMemo(() => receivedData || [], [receivedData]);
+    const { data: issuedData } = useQuery({
+        queryKey: ['issuedInvoicesSummary', nip],
+        queryFn: async () => {
+            const response = await getInvoices({
+                subjectType: 'Subject1',
+                dateRange: { dateType: 'PermanentStorage', ...dateRange },
+            });
+
+            if (!response.success) {
+                throw new Error(response.error || 'Błąd pobierania faktur');
+            }
+
+            return response.data?.invoices || [];
+        },
+        enabled: isKsefConnected,
+        staleTime: 60_000,
+    });
+
+    const invoices: CachedInvoice[] = useMemo(() => receivedData || [], [receivedData]);
+    const issuedInvoices: CachedInvoice[] = useMemo(() => issuedData || [], [issuedData]);
 
     const errorMessage = error
         ? (error as Error).message || 'Nie udało się pobrać faktur.'
@@ -61,6 +89,20 @@ export default function Dashboard() {
         total: invoices.length,
         totalGross: invoices.reduce((sum, inv) => sum + (inv.grossAmount || 0), 0),
     }), [invoices]);
+
+    const chartDays = useMemo(() => {
+        const issuedCounts = buildDailyCounts(issuedInvoices);
+        const receivedCounts = buildDailyCounts(invoices);
+        return Array.from({ length: CHART_DAY_COUNT }, (_, i) => ({
+            day: i + 1,
+            issued: issuedCounts[i],
+            received: receivedCounts[i],
+        }));
+    }, [issuedInvoices, invoices]);
+
+    const balanceIssued = useMemo(() => chartDays.reduce((sum, d) => sum + d.issued, 0), [chartDays]);
+    const balanceReceived = useMemo(() => chartDays.reduce((sum, d) => sum + d.received, 0), [chartDays]);
+    const chartMax = Math.max(1, ...chartDays.map((d) => Math.max(d.issued, d.received)));
 
     const subtitleText = useMemo(() => {
         if (needsCompanySetup) return 'Skonfiguruj firmę, aby rozpocząć pracę z KSeF';
@@ -127,15 +169,15 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                                 <div className="mt-3 flex h-12 items-end gap-0.5" aria-hidden>
-                                    {CHART_DAYS.map((d) => (
+                                    {chartDays.map((d) => (
                                         <div key={d.day} className="flex flex-1 items-end gap-px">
                                             <div
                                                 className="flex-1 rounded-sm bg-accent/70"
-                                                style={{ height: `${(d.issued / CHART_MAX) * 100}%` }}
+                                                style={{ height: isKsefConnected ? `${(d.issued / chartMax) * 100}%` : '2%' }}
                                             />
                                             <div
                                                 className="flex-1 rounded-sm bg-primary/40"
-                                                style={{ height: `${(d.received / CHART_MAX) * 100}%` }}
+                                                style={{ height: isKsefConnected ? `${(d.received / chartMax) * 100}%` : '2%' }}
                                             />
                                         </div>
                                     ))}
@@ -143,11 +185,11 @@ export default function Dashboard() {
                                 <div className="mt-2 flex items-center gap-4 text-[11px] text-muted-foreground">
                                     <span className="flex items-center gap-1.5">
                                         <span className="h-2 w-2 rounded-sm bg-accent/70" />
-                                        Wystawione: {BALANCE_ISSUED}
+                                        Wystawione: {isKsefConnected ? balanceIssued : '—'}
                                     </span>
                                     <span className="flex items-center gap-1.5">
                                         <span className="h-2 w-2 rounded-sm bg-primary/40" />
-                                        Odebrane: {BALANCE_RECEIVED}
+                                        Odebrane: {isKsefConnected ? balanceReceived : '—'}
                                     </span>
                                 </div>
                             </div>
@@ -193,18 +235,18 @@ export default function Dashboard() {
                                         <tbody className="divide-y divide-border">
                                             {invoices.length > 0 ? (
                                                 invoices.slice(0, 10).map((row) => (
-                                                    <tr key={row.ksefNumber} className="hover:bg-muted/40 transition-colors border-b border-border last:border-0">
-                                                        <td className="px-6 py-3 font-mono text-[12px] text-foreground/70">{row.ksefNumber}</td>
+                                                    <tr key={row.ksefReferenceNumber} className="hover:bg-muted/40 transition-colors border-b border-border last:border-0">
+                                                        <td className="px-6 py-3 font-mono text-[12px] text-foreground/70">{row.ksefReferenceNumber}</td>
                                                         <td className="px-4 py-3 font-medium text-foreground">{row.invoiceNumber || '—'}</td>
-                                                        <td className="px-4 py-3 text-foreground">{row.seller?.name || '—'}</td>
-                                                        <td className="px-4 py-3 font-mono text-[12px] text-foreground">{row.seller?.nip || '—'}</td>
+                                                        <td className="px-4 py-3 text-foreground">{row.sellerName || '—'}</td>
+                                                        <td className="px-4 py-3 font-mono text-[12px] text-foreground">{row.sellerNip || '—'}</td>
                                                         <td className="px-4 py-3 text-right font-semibold text-foreground">
                                                             {row.grossAmount?.toLocaleString('pl-PL', {
                                                                 style: 'currency',
                                                                 currency: row.currency || 'PLN',
                                                             }) || '—'}
                                                         </td>
-                                                        <td className="px-6 py-3 text-foreground/70">{row.issueDate || '—'}</td>
+                                                        <td className="px-6 py-3 text-foreground/70">{row.invoiceDate?.split('T')[0] || '—'}</td>
                                                     </tr>
                                                 ))
                                             ) : (

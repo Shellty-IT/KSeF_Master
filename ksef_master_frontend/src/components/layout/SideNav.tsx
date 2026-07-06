@@ -54,7 +54,7 @@ export default function SideNav() {
     const ksefLabelColor = isKsefConnected
         ? 'text-accent'
         : ksefTokenExpired && authMethod === 'token'
-            ? 'text-warning-foreground'
+            ? 'text-warning'
             : 'text-destructive/90';
 
     const ksefStatusLabel = isKsefConnected
@@ -158,7 +158,7 @@ export default function SideNav() {
                 <div className="px-4 pb-4">
                     <NavLink
                         to="/settings"
-                        className="flex w-full items-center gap-2 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-semibold text-warning-foreground transition hover:bg-warning/15"
+                        className="flex w-full items-center gap-2 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-semibold text-warning transition hover:bg-warning/15"
                     >
                         <AlertTriangle className="h-4 w-4 shrink-0" />
                         Skonfiguruj firmę

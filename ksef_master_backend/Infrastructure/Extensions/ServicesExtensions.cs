@@ -1,4 +1,5 @@
 ﻿// Infrastructure/Extensions/ServicesExtensions.cs
+using System.Security.Claims;
 using KSeF.Backend.Repositories;
 using KSeF.Backend.Services.Auth;
 using KSeF.Backend.Services.External;
@@ -36,7 +37,23 @@ public static class ServicesExtensions
 
     private static void RegisterSingletons(IServiceCollection services)
     {
-        services.AddSingleton<KSeFSessionManager>();
+        services.AddHttpContextAccessor();
+        services.AddSingleton<KSeFSessionStore>();
+
+        // KSeFSessionManager holds per-user KSeF tokens/keys. It must never be a plain
+        // singleton (that would leak one user's KSeF session to every other user) nor a
+        // plain scoped/transient instance (that would lose the session between requests).
+        // Instead each request resolves the KSeFSessionManager belonging to the currently
+        // authenticated user from the singleton KSeFSessionStore.
+        services.AddScoped(sp =>
+        {
+            var userIdClaim = sp.GetRequiredService<IHttpContextAccessor>()
+                .HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = int.TryParse(userIdClaim, out var id) ? id : 0;
+
+            return sp.GetRequiredService<KSeFSessionStore>().GetSession(userId);
+        });
+
         services.AddScoped<IExternalDraftService, ExternalDraftService>();
         services.AddSingleton<ExternalDraftValidator>();
         services.AddSingleton<ITokenEncryptionService, TokenEncryptionService>();

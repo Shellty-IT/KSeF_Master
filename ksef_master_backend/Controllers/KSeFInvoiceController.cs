@@ -104,7 +104,7 @@ public class KSeFInvoiceController : BaseApiController
 
         _logger.LogInformation("GetInvoices (cache only): companyProfileId={Id}", company.Id);
 
-        var cached = await _queryService.GetCachedInvoicesAsync(company.Id);
+        var cached = await _queryService.GetCachedInvoicesAsync(company.Id, request);
 
         return Ok(ApiResponse<object>.Ok(new
         {
