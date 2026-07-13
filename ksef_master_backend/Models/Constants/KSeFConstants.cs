@@ -26,8 +26,8 @@ public static class KSeFConstants
 
     public static class SubjectType
     {
-        public const string Subject1 = "subject1";
-        public const string Subject2 = "subject2";
+        public const string Subject1 = "Subject1";
+        public const string Subject2 = "Subject2";
     }
 
     public static class Direction

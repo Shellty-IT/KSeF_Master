@@ -24,10 +24,9 @@ public class KSeFEnvironmentService : IKSeFEnvironmentService
         
         if (!section.Exists())
         {
-            _logger.LogWarning(
-                "⚠️ KSeF environment '{Environment}' not found in configuration, using Test fallback",
-                environment);
-            section = _configuration.GetSection("KSeF:Environments:Test");
+            throw new ArgumentException(
+                $"Nieznane środowisko KSeF: '{environment}'",
+                nameof(environment));
         }
 
         config.ApiBaseUrl = section.GetValue<string>("ApiBaseUrl")

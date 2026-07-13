@@ -5,6 +5,7 @@ import { ksefHttpClient, ksefHttpClientLong } from '../apiClient';
 export interface LoginRequest {
     nip: string;
     ksefToken: string;
+    ksefEnvironment?: 'Test' | 'Production';
 }
 
 export interface LoginResponse {

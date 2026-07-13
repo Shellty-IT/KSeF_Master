@@ -13,7 +13,10 @@ public static class AuthenticationExtensions
         if (string.IsNullOrWhiteSpace(jwtKey))
             throw new InvalidOperationException(
                 "JWT signing key (Jwt:Key) is not configured. " +
-                "Set it via the JWT_KEY environment variable or appsettings.");
+                "Set it via the Jwt__Key environment variable, User Secrets, or local appsettings.");
+
+        if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+            throw new InvalidOperationException("JWT signing key must contain at least 32 bytes.");
 
         var jwtIssuer = builder.Configuration.GetValue<string>("Jwt:Issuer") ?? "KSeFMaster";
         var jwtAudience = builder.Configuration.GetValue<string>("Jwt:Audience") ?? "KSeFMasterApp";

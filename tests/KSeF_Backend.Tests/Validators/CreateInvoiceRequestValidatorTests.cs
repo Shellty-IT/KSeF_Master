@@ -137,4 +137,51 @@ public class CreateInvoiceRequestValidatorTests
         req.Items = [new InvoiceItem { Name = "Prezent", Quantity = 1, UnitPriceNet = 0m }];
         _sut.Validate(req).IsValid.Should().BeTrue();
     }
+
+    [Theory]
+    [InlineData(-0.01)]
+    [InlineData(100.01)]
+    public void Item_with_discount_outside_percentage_range_fails(decimal discount)
+    {
+        var req = Valid();
+        req.Items[0].DiscountPercent = discount;
+
+        var result = _sut.Validate(req);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Items[0].DiscountPercent");
+    }
+
+    [Theory]
+    [InlineData("2025-02-30")]
+    [InlineData("15.01.2025")]
+    [InlineData("2025-1-5")]
+    public void Invalid_issue_calendar_date_fails(string issueDate)
+    {
+        var req = Valid();
+        req.IssueDate = issueDate;
+
+        _sut.Validate(req).IsValid.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("24")]
+    [InlineData("")]
+    [InlineData("abc")]
+    public void Unsupported_vat_rate_fails(string vatRate)
+    {
+        var req = Valid();
+        req.Items[0].VatRate = vatRate;
+
+        _sut.Validate(req).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Invalid_nip_shape_fails()
+    {
+        var req = Valid();
+        req.Buyer.Nip = "ABC";
+
+        _sut.Validate(req).IsValid.Should().BeFalse();
+    }
 }

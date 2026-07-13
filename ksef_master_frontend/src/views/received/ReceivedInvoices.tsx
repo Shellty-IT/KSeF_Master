@@ -7,6 +7,7 @@ import KsefStatusAlerts from '../../components/features/ksef/KsefStatusAlerts';
 import InvoicePagination from '../../components/features/invoices/InvoicePagination';
 import { listReceived } from '../../services/ksefApi';
 import type { Invoice } from '../../types/ksef';
+import type { RiskFilter } from '../../types/fraud';
 import { useInvoiceFilters } from '../../hooks/useInvoiceFilters';
 import { useFraudDetection } from '../../hooks/useFraudDetection';
 import { useSyncInvoices } from '../../hooks/useSyncInvoices';
@@ -20,6 +21,7 @@ export default function ReceivedInvoices() {
     const { isKsefConnected, needsCompanySetup } = useAuth();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
+    const [riskFilter, setRiskFilter] = useState<RiskFilter>('all');
     const { downloadingPdf, download } = useInvoicePdfDownload();
 
     const query = useQuery<Invoice[], Error>({
@@ -34,15 +36,20 @@ export default function ReceivedInvoices() {
     const { sync, isSyncing, syncError } = useSyncInvoices({ queryKey: ['receivedInvoices'] });
 
     const { filters, setFilters, resetFilters, filteredInvoices, selection, toggleSelection, toggleSelectAll, selectedCount } = useInvoiceFilters(data);
-    const { results: fraudResults, summary: fraudSummary, refresh: refreshFraud } = useFraudDetection(filteredInvoices);
+    // Risk analysis always uses the complete server result. UI filters must never
+    // change duplicate history or the first-seen contractor calculation.
+    const { results: fraudResults, summary: fraudSummary, refresh: refreshFraud } = useFraudDetection(data);
 
     const finalFilteredInvoices = useMemo(() => {
-        if (!filters.showOnlySuspicious) return filteredInvoices;
+        if (riskFilter === 'all') return filteredInvoices;
         return filteredInvoices.filter(inv => {
             const result = fraudResults.get(inv.numerKsef);
-            return result && result.alertLevel !== 'none';
+            if (!result) return false;
+            return riskFilter === 'suspicious'
+                ? result.alertLevel !== 'none'
+                : result.alertLevel === riskFilter;
         });
-    }, [filteredInvoices, filters.showOnlySuspicious, fraudResults]);
+    }, [filteredInvoices, fraudResults, riskFilter]);
 
     const total = finalFilteredInvoices.length;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -59,6 +66,7 @@ export default function ReceivedInvoices() {
                 invoiceNumber: invoice.numerFaktury,
                 issueDate: invoice.dataWystawienia,
                 invoiceHash: invoice.invoiceHash,
+                ksefEnvironment: invoice.ksefEnvironment,
                 ksefNumber: invoice.numerKsef,
                 seller: {
                     nip: invoice.nipSprzedawcy || invoice.nipKontrahenta,
@@ -77,7 +85,7 @@ export default function ReceivedInvoices() {
             <main className="flex flex-1 flex-col overflow-hidden">
                 <TopBar />
                 <div className="flex-1 overflow-y-auto">
-                    <div className="mx-auto max-w-7xl space-y-4 p-8">
+                    <div className="mx-auto max-w-7xl space-y-4 p-4 sm:p-8">
                         <header>
                             <h1 className="text-2xl font-bold tracking-tight text-foreground">Faktury odebrane</h1>
                             <p className="mt-1 text-sm text-muted-foreground">Lista dokumentów odebranych w KSeF</p>
@@ -95,16 +103,47 @@ export default function ReceivedInvoices() {
                             </div>
                         )}
 
-                        {fraudSummary.total > 0 && (
-                            <div className="flex items-center gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm">
-                                <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
-                                <span className="text-destructive">
-                                    Wykryto <strong>{fraudSummary.total}</strong> podejrzanych faktur
-                                    {fraudSummary.high > 0 && <span> ({fraudSummary.high} wysokich)</span>}
-                                    {fraudSummary.medium > 0 && <span> ({fraudSummary.medium} średnich)</span>}
-                                </span>
+                        <section className="ks-card p-4" aria-labelledby="risk-summary-title">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                <div className="flex items-start gap-2.5">
+                                    <AlertCircle className={`mt-0.5 h-4 w-4 shrink-0 ${fraudSummary.total > 0 ? 'text-destructive' : 'text-accent'}`} />
+                                    <div>
+                                        <h2 id="risk-summary-title" className="text-sm font-semibold text-foreground">Sygnały ryzyka</h2>
+                                        <p className="mt-0.5 text-[12px] text-muted-foreground">
+                                            {fraudSummary.total > 0
+                                                ? `${fraudSummary.total} faktur wymaga weryfikacji. Alert nie przesądza o nieprawidłowości.`
+                                                : 'Nie wykryto sygnałów wymagających weryfikacji.'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2" role="group" aria-label="Filtr poziomu ryzyka">
+                                    {([
+                                        { id: 'all', label: 'Wszystkie', count: data.length, cls: 'border-border' },
+                                        { id: 'suspicious', label: 'Wymagają uwagi', count: fraudSummary.total, cls: 'border-warning/40' },
+                                        { id: 'high', label: 'Wysokie', count: fraudSummary.high, cls: 'border-destructive/40' },
+                                        { id: 'medium', label: 'Średnie', count: fraudSummary.medium, cls: 'border-warning/40' },
+                                        { id: 'low', label: 'Niskie', count: fraudSummary.low, cls: 'border-border' },
+                                    ] as const).map(option => (
+                                        <button
+                                            key={option.id}
+                                            type="button"
+                                            aria-pressed={riskFilter === option.id}
+                                            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-medium transition ${option.cls} ${
+                                                riskFilter === option.id
+                                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                                    : 'bg-card text-muted-foreground hover:bg-secondary hover:text-foreground'
+                                            }`}
+                                            onClick={() => { setRiskFilter(option.id); setPage(1); }}
+                                        >
+                                            {option.label}
+                                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${riskFilter === option.id ? 'bg-white/15' : 'bg-muted'}`}>
+                                                {option.count}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        )}
+                        </section>
 
                         {/* Actions bar */}
                         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -135,7 +174,7 @@ export default function ReceivedInvoices() {
                             </div>
                         </div>
 
-                        <InvoiceFilters filters={filters} onChange={setFilters} onReset={resetFilters} showSuspiciousFilter={true} />
+                        <InvoiceFilters filters={filters} onChange={(next) => { setFilters(next); setPage(1); }} onReset={() => { resetFilters(); setPage(1); }} />
 
                         {/* Table */}
                         <div className="ks-card overflow-hidden">

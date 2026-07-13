@@ -13,7 +13,8 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Hasło jest wymagane")
-            .MinimumLength(8).WithMessage("Hasło musi mieć co najmniej 8 znaków");
+            .MinimumLength(8).WithMessage("Hasło musi mieć co najmniej 8 znaków")
+            .MaximumLength(128).WithMessage("Hasło może mieć maksymalnie 128 znaków");
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Imię i nazwisko jest wymagane")

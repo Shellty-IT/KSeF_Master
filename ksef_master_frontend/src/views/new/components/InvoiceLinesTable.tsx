@@ -72,7 +72,7 @@ export default function InvoiceLinesTable({ lines, totals, onUpdateLine, onAddLi
                                         <VatSelect value={l.vatRate} onChange={v => onUpdateLine(idx, { vatRate: v })} compact />
                                     </td>
                                     <td className="px-2 py-1.5">
-                                        <NumberInput value={l.discount || 0} onChange={v => onUpdateLine(idx, { discount: v })} min={0} compact />
+                                        <NumberInput value={l.discount || 0} onChange={v => onUpdateLine(idx, { discount: v })} min={0} max={100} compact />
                                     </td>
                                     <td className="px-2 py-1.5 text-right font-medium">{formatPLN(res.net)}</td>
                                     <td className="px-2 py-1.5 text-right text-muted-foreground">{formatPLN(res.vat)}</td>

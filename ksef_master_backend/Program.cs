@@ -16,9 +16,11 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 app.InitializeDatabase();
-app.UseSwaggerUI();
+if (app.Environment.IsDevelopment())
+    app.UseSwaggerUI();
 app.UseAppMiddleware();
 app.UseCors();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

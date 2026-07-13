@@ -15,7 +15,7 @@ import { addDays, loadDraft, loadImportedData, saveSentInvoice, mapVatRateToKsef
 import { STORAGE_KEYS } from '../../../constants/storage';
 
 export default function useNewInvoice() {
-    const { nip: sessionNip, isAuthenticated } = useAuth();
+    const { nip: sessionNip, isAuthenticated, ksefEnvironment } = useAuth();
     const [searchParams] = useSearchParams();
     const isImported = searchParams.get('source') === 'imported';
     const { validate } = useInvoiceValidation();
@@ -170,6 +170,7 @@ export default function useNewInvoice() {
                     unit: line.unit,
                     quantity: line.qty,
                     unitPriceNet: line.priceNet,
+                    discountPercent: line.discount || 0,
                     vatRate: mapVatRateToKsef(line.vatRate),
                 })),
                 currency: draft.currency,
@@ -218,6 +219,7 @@ export default function useNewInvoice() {
                 buyerName: draft.buyer.name,
                 grossAmount: totals.gross,
                 invoiceHash: invoiceHash || undefined,
+                ksefEnvironment,
                 issueDate: draft.issueDate,
                 saleDate: draft.sellDate,
                 issuePlace: draft.place,

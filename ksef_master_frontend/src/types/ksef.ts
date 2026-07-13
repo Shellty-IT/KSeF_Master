@@ -15,6 +15,7 @@ export interface Invoice {
     kwotaVat?: number;
     nazwaSprzedawcy?: string;
     nipSprzedawcy?: string;
+    ksefEnvironment?: string;
 }
 
 export interface ListInvoicesParams {

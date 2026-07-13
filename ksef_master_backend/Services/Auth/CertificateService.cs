@@ -70,7 +70,8 @@ public class CertificateService : ICertificateService
             }
             catch (Exception ex)
             {
-                return Fail($"Nieprawidłowy certyfikat: {ex.Message}");
+                _logger.LogWarning(ex, "Invalid certificate uploaded by user {UserId}", userId);
+                return Fail("Nieprawidłowy certyfikat lub nieobsługiwany format certyfikatu");
             }
 
             company.CertificateEncrypted = _encryption.Encrypt(request.CertificateBase64.Trim());
@@ -90,7 +91,7 @@ public class CertificateService : ICertificateService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to upload certificate for user {UserId}", userId);
-            return Fail($"Błąd zapisu certyfikatu: {ex.Message}");
+            return Fail("Nie udało się bezpiecznie zapisać certyfikatu");
         }
     }
 

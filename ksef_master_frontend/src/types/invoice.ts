@@ -9,6 +9,7 @@ export interface SentInvoiceRecord {
     buyerName: string;
     grossAmount: number;
     invoiceHash?: string;
+    ksefEnvironment?: string;
     issueDate?: string;
     saleDate?: string;
     issuePlace?: string;
@@ -60,6 +61,7 @@ export interface CreateInvoiceRequest {
         unit: string;
         quantity: number;
         unitPriceNet: number;
+        discountPercent: number;
         vatRate: string;
     }[];
     currency?: string;
@@ -75,6 +77,7 @@ export interface GeneratePdfRequest {
     source: 'local' | 'ksef';
     ksefNumber?: string;
     invoiceHash?: string;
+    ksefEnvironment?: string;
     invoiceNumber?: string;
     issueDate?: string;
     saleDate?: string;

@@ -31,10 +31,10 @@ public class KSeFAuthPollingService : IKSeFAuthPollingService
         {
             await Task.Delay(PollingDelayMs, cancellationToken);
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"auth/{referenceNumber}");
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"auth/{referenceNumber}");
             request.Headers.Add("Authorization", $"Bearer {authenticationToken}");
 
-            var response = await client.SendAsync(request, cancellationToken);
+            using var response = await client.SendAsync(request, cancellationToken);
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
             if (!response.IsSuccessStatusCode)

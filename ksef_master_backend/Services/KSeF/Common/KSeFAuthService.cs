@@ -62,24 +62,26 @@ public class KSeFAuthService : IKSeFAuthService
             var client = CreateClient(apiBaseUrl);
 
             _logger.LogInformation("--- Krok 1: Pobieranie listy certyfikatów publicznych ---");
-            var certificates = await FetchPublicCertificatesAsync(client, ct);
+            var certificates = await FetchPublicCertificatesAsync(client, environment, ct);
             _logger.LogInformation("  ✓ Pobrano {Count} certyfikatów", certificates.Count);
 
-            _session.SetCertificates(certificates);
+            _session.SetCertificates(environment, certificates);
 
+            var now = DateTime.UtcNow;
             var tokenEncryptionCert = certificates.FirstOrDefault(c =>
-                c.Usage != null && c.Usage.Any(u =>
-                    u.Contains("KsefTokenEncryption", StringComparison.OrdinalIgnoreCase) ||
-                    u.Contains("Encryption", StringComparison.OrdinalIgnoreCase) ||
-                    u.Contains("Token", StringComparison.OrdinalIgnoreCase)))
-                ?? certificates.FirstOrDefault();
+                c.ValidFrom <= now && c.ValidTo > now &&
+                c.Usage?.Any(u =>
+                    u.Equals("KsefTokenEncryption", StringComparison.OrdinalIgnoreCase)) == true);
 
             if (tokenEncryptionCert == null)
-                return Fail("Brak certyfikatu do szyfrowania");
+                return Fail("Brak ważnego certyfikatu do szyfrowania tokenu KSeF");
+
+            if (string.IsNullOrWhiteSpace(tokenEncryptionCert.PublicKeyId))
+                return Fail("Certyfikat KSeF nie zawiera identyfikatora klucza publicznego");
 
             _logger.LogInformation("--- Krok 2: POST auth/challenge ---");
             var (challenge, timestampMs) = await _challengeService.GetChallengeAsync(client, ct);
-            _logger.LogInformation("  ✓ Challenge: {Ch}, Timestamp: {Ts}", challenge, timestampMs);
+            _logger.LogInformation("  ✓ Pobrano challenge uwierzytelniający");
 
             _logger.LogInformation("--- Krok 3: Szyfrowanie tokenu certyfikatem ---");
             var encryptedToken = _cryptoService.EncryptToken(ksefToken, timestampMs, tokenEncryptionCert.Certificate);
@@ -87,7 +89,7 @@ public class KSeFAuthService : IKSeFAuthService
 
             _logger.LogInformation("--- Krok 4: POST auth/ksef-token ---");
             var (authenticationToken, referenceNumber) = await SendAuthTokenRequestAsync(
-                client, nip, challenge, encryptedToken, ct);
+                client, nip, challenge, encryptedToken, tokenEncryptionCert.PublicKeyId, ct);
             _logger.LogInformation("  ✓ ReferenceNumber: {Ref}", referenceNumber);
 
             _logger.LogInformation("--- Krok 5: Polling GET auth/{Ref} ---", referenceNumber);
@@ -103,7 +105,7 @@ public class KSeFAuthService : IKSeFAuthService
             if (tokens?.AccessToken == null)
                 return Fail("Brak accessToken w odpowiedzi KSeF");
 
-            _session.SetAuthSession(nip, tokens);
+            _session.SetAuthSession(nip, tokens, environment);
 
             _logger.LogInformation("═══════════════════════════════════════════════════════════════");
             _logger.LogInformation("  ✅ ZALOGOWANO POMYŚLNIE DO KSeF!");
@@ -115,16 +117,20 @@ public class KSeFAuthService : IKSeFAuthService
             return new AuthResult
             {
                 Success = true,
-                SessionToken = tokens.AccessToken.Token,
                 ReferenceNumber = referenceNumber,
                 AccessTokenValidUntil = tokens.AccessToken.ValidUntil,
                 RefreshTokenValidUntil = tokens.RefreshToken?.ValidUntil
             };
         }
+        catch (KSeFApiException ex)
+        {
+            _logger.LogWarning("KSeF rejected login for NIP {Nip}: {Error}", nip, ex.Message);
+            return Fail(ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Login failed for NIP: {Nip}", nip);
-            return Fail(ex.Message);
+            return Fail("Nie udało się zalogować do KSeF");
         }
     }
 
@@ -146,30 +152,37 @@ public class KSeFAuthService : IKSeFAuthService
 
     private async Task<List<CertificateInfo>> FetchPublicCertificatesAsync(
         HttpClient client,
+        string environment,
         CancellationToken ct)
     {
-        var cached = _session.GetCachedCertificates();
+        var cached = _session.GetCachedCertificates(environment);
         if (cached != null)
         {
             _logger.LogDebug("Certyfikaty z cache ({Count} szt.)", cached.Count);
             return cached;
         }
 
-        var response = await client.GetAsync("security/public-key-certificates", ct);
+        using var response = await client.GetAsync("security/public-key-certificates", ct);
         var responseBody = await response.Content.ReadAsStringAsync(ct);
 
         if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException($"Failed to fetch certificates: {responseBody}");
+            throw new KSeFApiException(
+                $"Failed to fetch certificates: {KSeFErrorParser.Parse(responseBody)}",
+                response.StatusCode);
 
         try
         {
-            return JsonSerializer.Deserialize<List<CertificateInfo>>(responseBody, _jsonOptions)
+            var certificates = JsonSerializer.Deserialize<List<CertificateInfo>>(responseBody, _jsonOptions)
                 ?? new List<CertificateInfo>();
+            _session.SetCertificates(environment, certificates);
+            return certificates;
         }
         catch
         {
             var wrapper = JsonSerializer.Deserialize<CertificatesWrapper>(responseBody, _jsonOptions);
-            return wrapper?.Certificates ?? new List<CertificateInfo>();
+            var certificates = wrapper?.Certificates ?? new List<CertificateInfo>();
+            _session.SetCertificates(environment, certificates);
+            return certificates;
         }
     }
 
@@ -178,13 +191,15 @@ public class KSeFAuthService : IKSeFAuthService
         string nip,
         string challenge,
         string encryptedToken,
+        string publicKeyId,
         CancellationToken ct)
     {
         var requestBody = new
         {
             challenge,
             contextIdentifier = new { type = "Nip", value = nip },
-            encryptedToken
+            encryptedToken,
+            publicKeyId
         };
 
         var content = new StringContent(
@@ -192,16 +207,16 @@ public class KSeFAuthService : IKSeFAuthService
             Encoding.UTF8,
             "application/json");
 
-        var response = await client.PostAsync("auth/ksef-token", content, ct);
+        using var response = await client.PostAsync("auth/ksef-token", content, ct);
         var responseBody = await response.Content.ReadAsStringAsync(ct);
 
         _logger.LogInformation("  Response: {Status}", response.StatusCode);
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("  Error: {Body}", KSeFResponseLogger.Sanitize(responseBody));
             var error = KSeFErrorParser.Parse(responseBody);
-            throw new KSeFApiException($"auth/ksef-token failed: {error}");
+            _logger.LogError("KSeF token authentication failed: {Error}", error);
+            throw new KSeFApiException($"auth/ksef-token failed: {error}", response.StatusCode);
         }
 
         var parsed = JsonSerializer.Deserialize<AuthTokenResponse>(responseBody, _jsonOptions);

@@ -7,6 +7,12 @@ public class CertificateInfo
     [JsonPropertyName("certificate")]
     public string Certificate { get; set; } = string.Empty;
 
+    [JsonPropertyName("certificateId")]
+    public string CertificateId { get; set; } = string.Empty;
+
+    [JsonPropertyName("publicKeyId")]
+    public string PublicKeyId { get; set; } = string.Empty;
+
     [JsonPropertyName("validFrom")]
     public DateTime ValidFrom { get; set; }
 

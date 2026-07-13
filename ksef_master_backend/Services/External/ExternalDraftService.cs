@@ -275,7 +275,7 @@ public class ExternalDraftService : IExternalDraftService
         httpRequest.Headers.Add("X-Signature", signature);
         httpRequest.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
-        var response = await client.SendAsync(httpRequest);
+        using var response = await client.SendAsync(httpRequest);
 
         if (response.IsSuccessStatusCode)
         {
@@ -283,10 +283,9 @@ public class ExternalDraftService : IExternalDraftService
         }
         else
         {
-            var body = await response.Content.ReadAsStringAsync();
             _logger.LogWarning(
-                "Webhook returned {StatusCode} for {SmartQuoteId}: {Body}",
-                response.StatusCode, smartQuoteId, body);
+                "Webhook returned {StatusCode} for {SmartQuoteId}",
+                response.StatusCode, smartQuoteId);
             // Throw so the retry wrapper can attempt again
             throw new HttpRequestException($"Webhook non-success: {response.StatusCode}");
         }

@@ -1,6 +1,7 @@
 ﻿// Services/KSeF/Invoice/KSeFOnlineSessionService.cs
 using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography;
 using KSeF.Backend.Infrastructure.KSeF;
 using KSeF.Backend.Models.Responses.Common;
 using KSeF.Backend.Models.Responses.Certificate;
@@ -55,18 +56,29 @@ public class KSeFOnlineSessionService : IKSeFOnlineSessionService
             };
         }
 
+        byte[]? aesKey = null;
+        byte[]? iv = null;
+
         try
         {
-            var certificates = _session.GetCachedCertificates() ?? await FetchCertificatesAsync(ct);
+            var environment = _session.Environment
+                ?? throw new InvalidOperationException("Brak środowiska dla aktywnej sesji KSeF");
+            var certificates = _session.GetCachedCertificates(environment)
+                ?? await FetchCertificatesAsync(environment, ct);
 
+            var now = DateTime.UtcNow;
             var symCert = certificates.FirstOrDefault(c =>
-                c.Usage?.Any(u => u.Contains("SymmetricKeyEncryption", StringComparison.OrdinalIgnoreCase)) == true)
-                ?? certificates.FirstOrDefault();
+                c.ValidFrom <= now && c.ValidTo > now &&
+                c.Usage?.Any(u =>
+                    u.Equals("SymmetricKeyEncryption", StringComparison.OrdinalIgnoreCase)) == true);
 
             if (symCert == null)
-                return Fail("Brak certyfikatu do szyfrowania klucza symetrycznego");
+                return Fail("Brak ważnego certyfikatu do szyfrowania klucza symetrycznego");
 
-            var (aesKey, iv) = _cryptoService.GenerateAesKeyAndIv();
+            if (string.IsNullOrWhiteSpace(symCert.PublicKeyId))
+                return Fail("Certyfikat KSeF nie zawiera identyfikatora klucza publicznego");
+
+            (aesKey, iv) = _cryptoService.GenerateAesKeyAndIv();
             var encryptedSymmetricKey = _cryptoService.EncryptAesKey(aesKey, symCert.Certificate);
 
             var requestBody = new
@@ -80,7 +92,8 @@ public class KSeFOnlineSessionService : IKSeFOnlineSessionService
                 encryption = new
                 {
                     encryptedSymmetricKey,
-                    initializationVector = Convert.ToBase64String(iv)
+                    initializationVector = Convert.ToBase64String(iv),
+                    publicKeyId = symCert.PublicKeyId
                 }
             };
 
@@ -91,7 +104,7 @@ public class KSeFOnlineSessionService : IKSeFOnlineSessionService
 
             _logger.LogInformation("Otwieram sesję online dla NIP: {Nip}", _session.Nip);
 
-            var response = await SendAuthorizedAsync(HttpMethod.Post, "sessions/online", content, ct);
+            using var response = await SendAuthorizedAsync(HttpMethod.Post, "sessions/online", content, ct);
             var responseBody = await response.Content.ReadAsStringAsync(ct);
 
             _logger.LogInformation("Open session response: {Status}", response.StatusCode);
@@ -99,8 +112,8 @@ public class KSeFOnlineSessionService : IKSeFOnlineSessionService
             if (!response.IsSuccessStatusCode)
             {
                 var error = KSeFErrorParser.Parse(responseBody);
-                _logger.LogError("Open session error: {Error} | Status: {Status} | Body: {Body}", 
-                    error, response.StatusCode, responseBody);
+                _logger.LogError("Open session error: {Error} | Status: {Status}",
+                    error, response.StatusCode);
                 return Fail($"Błąd otwierania sesji [{response.StatusCode}]: {error}");
             }
 
@@ -124,7 +137,14 @@ public class KSeFOnlineSessionService : IKSeFOnlineSessionService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Błąd otwierania sesji online");
-            return Fail(ex.Message);
+            return Fail("Nie udało się otworzyć sesji online KSeF");
+        }
+        finally
+        {
+            if (aesKey is not null)
+                CryptographicOperations.ZeroMemory(aesKey);
+            if (iv is not null)
+                CryptographicOperations.ZeroMemory(iv);
         }
     }
 
@@ -135,6 +155,9 @@ public class KSeFOnlineSessionService : IKSeFOnlineSessionService
         CancellationToken ct)
     {
         var client = _httpClientFactory.CreateClient("KSeF");
+        var environment = _session.Environment
+            ?? throw new InvalidOperationException("Brak środowiska dla aktywnej sesji KSeF");
+        client.BaseAddress = new Uri(_environmentService.GetApiBaseUrl(environment));
         using var request = new HttpRequestMessage(method, relativeUrl);
         request.Headers.Add("Authorization", $"Bearer {_session.AccessToken}");
         if (content != null)
@@ -142,21 +165,24 @@ public class KSeFOnlineSessionService : IKSeFOnlineSessionService
         return await client.SendAsync(request, ct);
     }
 
-    private async Task<List<CertificateInfo>> FetchCertificatesAsync(CancellationToken ct)
+    private async Task<List<CertificateInfo>> FetchCertificatesAsync(string environment, CancellationToken ct)
     {
         var client = _httpClientFactory.CreateClient("KSeF");
-        var response = await client.GetAsync("security/public-key-certificates", ct);
+        client.BaseAddress = new Uri(_environmentService.GetApiBaseUrl(environment));
+        using var response = await client.GetAsync("security/public-key-certificates", ct);
         var responseBody = await response.Content.ReadAsStringAsync(ct);
 
         if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException($"Błąd pobierania certyfikatów: {responseBody}");
+            throw new KSeFApiException(
+                $"Błąd pobierania certyfikatów: {KSeFErrorParser.Parse(responseBody)}",
+                response.StatusCode);
 
         try
         {
             var list = JsonSerializer.Deserialize<List<CertificateInfo>>(responseBody, JsonOptions);
             if (list != null && list.Count > 0)
             {
-                _session.SetCertificates(list);
+                _session.SetCertificates(environment, list);
                 return list;
             }
         }
@@ -164,7 +190,7 @@ public class KSeFOnlineSessionService : IKSeFOnlineSessionService
 
         var wrapper = JsonSerializer.Deserialize<CertificatesWrapper>(responseBody, JsonOptions);
         var certs = wrapper?.Certificates ?? new List<CertificateInfo>();
-        _session.SetCertificates(certs);
+        _session.SetCertificates(environment, certs);
         return certs;
     }
 

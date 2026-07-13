@@ -1,5 +1,6 @@
 // src/types/fraud.ts
 export type AlertLevel = 'none' | 'low' | 'medium' | 'high';
+export type RiskFilter = 'all' | 'suspicious' | Exclude<AlertLevel, 'none'>;
 
 export type AlertType =
     | 'unknown_contractor'

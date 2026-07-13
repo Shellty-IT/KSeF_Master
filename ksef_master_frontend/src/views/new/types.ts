@@ -60,6 +60,7 @@ export interface ImportedInvoiceData {
         unit: string;
         quantity: number;
         unitPriceNet: number;
+        discountPercent?: number;
         vatRate: string;
     }>;
     currency: string;

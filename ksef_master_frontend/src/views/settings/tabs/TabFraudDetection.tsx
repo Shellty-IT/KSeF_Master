@@ -12,7 +12,7 @@ export default function TabFraudDetection() {
 
     function showInfo(msg: string) { setInfo(msg); setTimeout(() => setInfo(null), 1800); }
 
-    function handleSave() { saveAlertSettings(alertSettings); showInfo('Ustawienia wykrywania zapisane.'); }
+    function handleSave() { saveAlertSettings(alertSettings); showInfo('Ustawienia analizy ryzyka zapisane.'); }
 
     function handleClearDismissed() {
         if (!confirm('Czy na pewno chcesz przywrócić wszystkie zignorowane alerty?')) return;
@@ -34,18 +34,18 @@ export default function TabFraudDetection() {
 
             <div className="ks-card p-5 space-y-4">
                 <div>
-                    <h3 className="ks-card-title">Wykrywanie podejrzanych faktur</h3>
-                    <p className="mt-0.5 text-[12px] text-muted-foreground">System automatycznie analizuje faktury odebrane i oznacza te, które wymagają uwagi.</p>
+                    <h3 className="ks-card-title">Analiza sygnałów ryzyka</h3>
+                    <p className="mt-0.5 text-[12px] text-muted-foreground">System automatycznie analizuje faktury odebrane i wskazuje dokumenty wymagające uwagi. Wynik nie przesądza o oszustwie.</p>
                 </div>
 
                 {checkbox(alertSettings.enabled,
                     (v) => setAlertSettings((s) => ({ ...s, enabled: v })),
-                    'Włącz wykrywanie podejrzanych faktur')}
+                    'Włącz analizę sygnałów ryzyka')}
 
                 {alertSettings.enabled && (
                     <>
                         {divider}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div className="space-y-1.5">
                                 <label className="ks-label" htmlFor="fd-high">Próg wysokiej kwoty (PLN)</label>
                                 <input id="fd-high" type="number" min={0} step={100} className="ks-input"
@@ -82,7 +82,7 @@ export default function TabFraudDetection() {
                             'Wykrywanie nietypowych godzin wystawienia')}
 
                         {alertSettings.unusualHoursEnabled && (
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div className="space-y-1.5">
                                     <label className="ks-label" htmlFor="fd-h-start">Godzina rozpoczęcia (typowe)</label>
                                     <input id="fd-h-start" type="time" className="ks-input"

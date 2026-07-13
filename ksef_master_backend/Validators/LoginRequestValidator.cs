@@ -15,5 +15,9 @@ public class LoginRequestValidator : AbstractValidator<LoginRequest>
         RuleFor(x => x.KsefToken)
             .NotEmpty().WithMessage("Token KSeF jest wymagany")
             .Must(t => t.Contains('|')).WithMessage("Nieprawidłowy format tokenu KSeF");
+
+        RuleFor(x => x.KsefEnvironment)
+            .Must(environment => environment is "Test" or "Production")
+            .WithMessage("Dozwolone środowiska: 'Test' lub 'Production'");
     }
 }

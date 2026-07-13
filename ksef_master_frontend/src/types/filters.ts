@@ -8,7 +8,6 @@ export interface InvoiceFilters {
     contractorName: string;
     invoiceNumber: string;
     currency: string;
-    showOnlySuspicious: boolean;
 }
 
 export const defaultFilters: InvoiceFilters = {
@@ -20,7 +19,6 @@ export const defaultFilters: InvoiceFilters = {
     contractorName: '',
     invoiceNumber: '',
     currency: '',
-    showOnlySuspicious: false,
 };
 
 export interface SelectionState {

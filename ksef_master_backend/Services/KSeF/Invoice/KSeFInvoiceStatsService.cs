@@ -20,50 +20,13 @@ public class KSeFInvoiceStatsService : IKSeFInvoiceStatsService
 
     public async Task<InvoiceStatsResponse> GetStatsAsync(int months, CancellationToken cancellationToken = default)
     {
-        var periodTo = DateTime.UtcNow.Date;
+        var periodTo = DateTime.UtcNow;
         var periodFrom = periodTo.AddMonths(-months);
 
         _logger.LogInformation("Computing stats from {From} to {To}", periodFrom, periodTo);
 
-        var issuedRequest = new InvoiceQueryRequest
-        {
-            SubjectType = "Subject1",
-            DateRange = new DateRangeFilter
-            {
-                From = periodFrom,
-                To = periodTo,
-                DateType = "InvoicingDate"
-            }
-        };
-
-        var receivedRequest = new InvoiceQueryRequest
-        {
-            SubjectType = "Subject2",
-            DateRange = new DateRangeFilter
-            {
-                From = periodFrom,
-                To = periodTo,
-                DateType = "InvoicingDate"
-            }
-        };
-
-        InvoiceQueryResponse issued;
-        InvoiceQueryResponse received;
-
-        try
-        {
-            issued = await _queryService.QueryInvoicesAsync(issuedRequest, cancellationToken);
-            received = await _queryService.QueryInvoicesAsync(receivedRequest, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error computing stats");
-            return new InvoiceStatsResponse
-            {
-                PeriodFrom = periodFrom,
-                PeriodTo = periodTo
-            };
-        }
+        var issued = await QueryPeriodAsync("Subject1", periodFrom, periodTo, cancellationToken);
+        var received = await QueryPeriodAsync("Subject2", periodFrom, periodTo, cancellationToken);
 
         var stats = new InvoiceStatsResponse
         {
@@ -78,10 +41,54 @@ public class KSeFInvoiceStatsService : IKSeFInvoiceStatsService
         };
 
         stats.Monthly = ComputeMonthlyStats(issued, received);
-        stats.TopContractors = ComputeTopContractors(issued.Invoices.Concat(received.Invoices).ToList());
+        stats.TopContractors = ComputeTopContractors(issued.Invoices, received.Invoices);
         stats.ByCurrency = ComputeCurrencyStats(issued.Invoices.Concat(received.Invoices).ToList());
 
         return stats;
+    }
+
+    private async Task<InvoiceQueryResponse> QueryPeriodAsync(
+        string subjectType,
+        DateTime periodFrom,
+        DateTime periodTo,
+        CancellationToken cancellationToken)
+    {
+        var result = new InvoiceQueryResponse();
+        var seenKsefNumbers = new HashSet<string>(StringComparer.Ordinal);
+        var windowFrom = periodFrom;
+
+        while (windowFrom < periodTo)
+        {
+            var windowTo = windowFrom.AddMonths(3);
+            if (windowTo > periodTo)
+                windowTo = periodTo;
+
+            var window = await _queryService.QueryInvoicesAsync(new InvoiceQueryRequest
+            {
+                SubjectType = subjectType,
+                DateRange = new DateRangeFilter
+                {
+                    From = windowFrom,
+                    To = windowTo,
+                    DateType = "Invoicing"
+                }
+            }, cancellationToken);
+
+            foreach (var invoice in window.Invoices)
+            {
+                if (seenKsefNumbers.Add(invoice.KsefNumber))
+                    result.Invoices.Add(invoice);
+            }
+
+            result.PagesProcessed += window.PagesProcessed;
+            result.IsTruncated |= window.IsTruncated;
+            result.HasMore |= window.HasMore;
+            windowFrom = windowTo;
+        }
+
+        result.TotalCount = result.Invoices.Count;
+        result.FetchedAt = DateTime.UtcNow;
+        return result;
     }
 
     private static List<MonthlyStats> ComputeMonthlyStats(
@@ -117,11 +124,17 @@ public class KSeFInvoiceStatsService : IKSeFInvoiceStatsService
         return monthlyStats.Values.OrderBy(m => m.Month).ToList();
     }
 
-    private static Dictionary<string, int> ComputeTopContractors(List<InvoiceMetadata> invoices)
+    private static Dictionary<string, int> ComputeTopContractors(
+        IEnumerable<InvoiceMetadata> issuedInvoices,
+        IEnumerable<InvoiceMetadata> receivedInvoices)
     {
-        return invoices
-            .Where(i => !string.IsNullOrEmpty(i.Seller?.Name))
-            .GroupBy(i => i.Seller!.Name!)
+        var contractorNames = issuedInvoices
+            .Select(invoice => invoice.Buyer?.Name)
+            .Concat(receivedInvoices.Select(invoice => invoice.Seller?.Name));
+
+        return contractorNames
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .GroupBy(name => name!, StringComparer.OrdinalIgnoreCase)
             .OrderByDescending(g => g.Count())
             .Take(10)
             .ToDictionary(g => g.Key, g => g.Count());

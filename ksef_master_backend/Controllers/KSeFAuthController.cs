@@ -27,6 +27,7 @@ public class KSeFAuthController : BaseApiController
     }
 
     [HttpGet("status")]
+    [Authorize]
     public IActionResult GetStatus()
     {
         return Ok(new
@@ -56,7 +57,8 @@ public class KSeFAuthController : BaseApiController
 
         _logger.LogInformation("KSeF login request for NIP: {Nip}", request.Nip);
 
-        var result = await _authService.LoginAsync(request.Nip, request.KsefToken, "Test", ct);
+        var result = await _authService.LoginAsync(
+            request.Nip, request.KsefToken, request.KsefEnvironment, ct);
 
         if (!result.Success)
         {

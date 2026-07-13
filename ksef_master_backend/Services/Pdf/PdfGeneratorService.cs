@@ -31,15 +31,15 @@ public class PdfGeneratorService : IPdfGeneratorService
     {
         _logger.LogInformation("Generowanie PDF dla faktury: {Number}", request.InvoiceNumber);
 
-        var environment = "Test";
+        var environment = request.KsefEnvironment is "Test" or "Production"
+            ? request.KsefEnvironment
+            : throw new ArgumentException("Nieprawidłowe środowisko KSeF", nameof(request));
         var sellerNip = request.Seller?.Nip ?? string.Empty;
         var issueDate = request.IssueDate ?? string.Empty;
         var invoiceHash = request.InvoiceHash ?? string.Empty;
 
         var verificationUrl = _urlBuilder.BuildVerificationUrl(sellerNip, issueDate, invoiceHash, environment);
         var qrCodeBytes = _qrGenerator.Generate(verificationUrl);
-
-        _logger.LogInformation("URL weryfikacyjny: {Url}", verificationUrl);
 
         var document = _composer.Compose(request, qrCodeBytes, verificationUrl, verificationUrl);
 

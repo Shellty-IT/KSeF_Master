@@ -1,6 +1,6 @@
 # KSeF Master
 
-KSeF Master is a full-stack application for working with Poland's **Krajowy System e-Faktur (KSeF)** — the national e-invoicing platform that becomes mandatory for B2B transactions. It bundles a React/TypeScript SPA with an ASP.NET Core 8 backend that talks to the KSeF gateway, persists invoice metadata to Postgres, and generates compliant FA(2) documents with PDF visualisations and QR codes.
+KSeF Master is a full-stack application for working with Poland's **Krajowy System e-Faktur (KSeF)** — the national e-invoicing platform that becomes mandatory for B2B transactions. It bundles a React/TypeScript SPA with an ASP.NET Core 8 backend that talks to the KSeF gateway, persists invoice metadata to Postgres, and generates compliant FA(3) documents with PDF visualisations and QR codes.
 
 The repository is organised as a monorepo so that frontend and backend ship and evolve together.
 
@@ -89,7 +89,7 @@ npm install
 npm run dev
 ```
 
-Then open `http://localhost:5173`. The dev server proxies `/health` and the API base URL to the backend — configuration lives in `vite.config.ts`. Environment variables are read from `.env` files (a `.env.example` template should be added before publishing publicly).
+Then open `http://localhost:5173`. The dev server proxies `/health` and `/api` to the backend. Copy `.env.example` to `.env` only when you need to override the backend URL, for example to use a remote API.
 
 Available scripts:
 
@@ -104,7 +104,7 @@ Available scripts:
 
 ## Running tests
 
-The frontend currently does not ship a test runner — `npm run lint` and `npm run build` (with `tsc`) act as the verification gate. When unit/integration tests are added (Vitest is the intended runner), CI will pick them up automatically via `npm test`.
+The frontend uses Vitest. CI runs the test suite with coverage in addition to ESLint, TypeScript type-checking and the production build.
 
 The backend uses `dotnet test`. Test projects should live next to their target as `*.Tests.csproj` and be added to a solution file; the CI workflow already runs `dotnet test` against the whole repo and will pick them up the moment they exist.
 
@@ -112,6 +112,7 @@ The backend uses `dotnet test`. Test projects should live next to their target a
 # Frontend
 cd ksef_master_frontend
 npm run lint
+npm test
 npm run build
 
 # Backend

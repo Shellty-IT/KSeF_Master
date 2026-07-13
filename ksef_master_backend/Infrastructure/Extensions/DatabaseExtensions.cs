@@ -8,8 +8,11 @@ public static class DatabaseExtensions
 {
     public static WebApplicationBuilder AddDatabase(this WebApplicationBuilder builder)
     {
-        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                               ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException(
+                "Connection string 'DefaultConnection' is not configured. " +
+                "Set ConnectionStrings__DefaultConnection or use User Secrets.");
 
         builder.Services.AddDbContext<AppDbContext>(options =>
         {

@@ -71,7 +71,7 @@ public class KSeFCertAuthService : IKSeFCertAuthService
 
             _logger.LogInformation("--- Krok 1: Ładowanie certyfikatu ---");
             var certificate = LoadCertificate(certificateBytes, privateKeyBytes, password);
-            _logger.LogInformation("  ✓ Subject: {Subject}", certificate.Subject);
+            _logger.LogInformation("  ✓ Certyfikat załadowany");
 
             if (!certificate.HasPrivateKey)
                 return Fail("Certyfikat nie zawiera klucza prywatnego");
@@ -88,7 +88,7 @@ public class KSeFCertAuthService : IKSeFCertAuthService
 
             _logger.LogInformation("--- Krok 2: POST auth/challenge ---");
             var (challenge, _) = await _challengeService.GetChallengeAsync(client, cancellationToken);
-            _logger.LogInformation("  ✓ Challenge: {Ch}", challenge);
+            _logger.LogInformation("  ✓ Pobrano challenge uwierzytelniający");
 
             _logger.LogInformation("--- Krok 3: Budowanie AuthTokenRequest ---");
             var authRequestXml = BuildAuthTokenRequestXml(challenge, nip);
@@ -127,7 +127,7 @@ public class KSeFCertAuthService : IKSeFCertAuthService
             if (tokens?.AccessToken == null)
                 return Fail("Brak accessToken");
 
-            _session.SetAuthSession(nip, tokens);
+            _session.SetAuthSession(nip, tokens, environment);
 
             _logger.LogInformation("═══════════════════════════════════════════════════════════════");
             _logger.LogInformation("  ✅ ZALOGOWANO CERTYFIKATEM POMYŚLNIE!");
@@ -137,16 +137,20 @@ public class KSeFCertAuthService : IKSeFCertAuthService
             return new AuthResult
             {
                 Success = true,
-                SessionToken = tokens.AccessToken.Token,
                 ReferenceNumber = referenceNumber,
                 AccessTokenValidUntil = tokens.AccessToken.ValidUntil,
                 RefreshTokenValidUntil = tokens.RefreshToken?.ValidUntil
             };
         }
+        catch (KSeFApiException ex)
+        {
+            _logger.LogWarning("KSeF rejected certificate authentication for NIP {Nip}: {Error}", nip, ex.Message);
+            return Fail(ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Certificate authentication failed for NIP: {Nip}", nip);
-            return Fail(ex.Message);
+            return Fail("Nie udało się uwierzytelnić certyfikatem w KSeF");
         }
     }
 
@@ -163,16 +167,18 @@ public class KSeFCertAuthService : IKSeFCertAuthService
         CancellationToken cancellationToken)
     {
         var content = new StringContent(signedXml, Encoding.UTF8, "application/xml");
-        var response = await client.PostAsync("auth/xades-signature", content, cancellationToken);
+        using var response = await client.PostAsync("auth/xades-signature", content, cancellationToken);
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
         _logger.LogInformation("  Response: {Status}", response.StatusCode);
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("  Error: {Body}", KSeFResponseLogger.Sanitize(responseBody));
-            throw new HttpRequestException(
-                $"auth/xades-signature failed ({response.StatusCode}): {responseBody}");
+            var error = KSeFErrorParser.Parse(responseBody);
+            _logger.LogError("XAdES authentication failed: {Error}", error);
+            throw new KSeFApiException(
+                $"auth/xades-signature failed: {error}",
+                response.StatusCode);
         }
 
         var parsed = JsonSerializer.Deserialize<AuthTokenResponse>(responseBody, _jsonOptions);

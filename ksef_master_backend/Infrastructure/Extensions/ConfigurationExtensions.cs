@@ -5,12 +5,17 @@ public static class ConfigurationExtensions
 {
     public static WebApplicationBuilder AddAppConfiguration(this WebApplicationBuilder builder)
     {
-        builder.Configuration.Sources.Clear();
-        builder.Configuration
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-            .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
-            .AddEnvironmentVariables();
+        // Keep the default ASP.NET Core providers (including command-line arguments).
+        // Local settings are optional and environment variables remain the final override.
+        builder.Configuration.AddJsonFile(
+            $"appsettings.{builder.Environment.EnvironmentName}.local.json",
+            optional: true,
+            reloadOnChange: false);
+
+        if (builder.Environment.IsDevelopment())
+            builder.Configuration.AddUserSecrets<Program>(optional: true);
+
+        builder.Configuration.AddEnvironmentVariables();
 
         return builder;
     }

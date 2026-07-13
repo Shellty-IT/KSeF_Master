@@ -17,7 +17,7 @@ namespace KSeF_Backend.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.4")
+                .HasAnnotation("ProductVersion", "8.0.27")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -131,6 +131,9 @@ namespace KSeF_Backend.Migrations
                     b.Property<DateTime?>("InvoiceDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("InvoiceHash")
+                        .HasColumnType("text");
+
                     b.Property<string>("InvoiceNumber")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -139,6 +142,9 @@ namespace KSeF_Backend.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("InvoicingDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("KsefEnvironment")
                         .IsRequired()
@@ -158,6 +164,9 @@ namespace KSeF_Backend.Migrations
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime?>("PermanentStorageDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SellerName")
                         .HasMaxLength(300)
@@ -181,12 +190,12 @@ namespace KSeF_Backend.Migrations
 
                     b.HasIndex("CompanyProfileId");
 
-                    b.HasIndex("KsefReferenceNumber")
-                        .IsUnique();
-
                     b.HasIndex("CompanyProfileId", "Direction");
 
                     b.HasIndex("CompanyProfileId", "InvoiceDate");
+
+                    b.HasIndex("CompanyProfileId", "KsefReferenceNumber")
+                        .IsUnique();
 
                     b.ToTable("Invoices");
                 });

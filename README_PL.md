@@ -1,6 +1,6 @@
 # KSeF Master
 
-KSeF Master to aplikacja full-stack do pracy z **Krajowym Systemem e-Faktur (KSeF)** — krajową platformą e-fakturowania, która staje się obowiązkowa dla obrotu B2B. Repozytorium łączy frontend SPA (React/TypeScript) z backendem ASP.NET Core 8, który komunikuje się z bramką KSeF, przechowuje metadane faktur w PostgreSQL i generuje zgodne dokumenty FA(2) wraz z wizualizacjami PDF i kodami QR.
+KSeF Master to aplikacja full-stack do pracy z **Krajowym Systemem e-Faktur (KSeF)** — krajową platformą e-fakturowania, która staje się obowiązkowa dla obrotu B2B. Repozytorium łączy frontend SPA (React/TypeScript) z backendem ASP.NET Core 8, który komunikuje się z bramką KSeF, przechowuje metadane faktur w PostgreSQL i generuje zgodne dokumenty FA(3) wraz z wizualizacjami PDF i kodami QR.
 
 Projekt zorganizowany jest jako monorepo, dzięki czemu frontend i backend są rozwijane i wydawane wspólnie.
 
@@ -89,7 +89,7 @@ npm install
 npm run dev
 ```
 
-Następnie otwórz `http://localhost:5173`. Serwer deweloperski proxy'uje `/health` oraz bazowy URL API do backendu — konfiguracja w `vite.config.ts`. Zmienne środowiskowe są wczytywane z plików `.env` (przed publikacją projektu publicznie warto dodać szablon `.env.example`).
+Następnie otwórz `http://localhost:5173`. Serwer deweloperski proxy'uje `/health` oraz `/api` do backendu. Plik `.env.example` kopiuj do `.env` tylko wtedy, gdy chcesz wskazać inny, na przykład zdalny backend.
 
 Dostępne skrypty:
 
@@ -104,7 +104,7 @@ Dostępne skrypty:
 
 ## Uruchamianie testów
 
-Frontend nie posiada jeszcze runnera testów — w roli bramki weryfikacyjnej działają `npm run lint` oraz `npm run build` (z `tsc`). Gdy testy jednostkowe/integracyjne zostaną dodane (planowany runner to Vitest), CI podchwyci je automatycznie przez `npm test`.
+Frontend korzysta z Vitest. CI uruchamia testy z raportem pokrycia, ESLint, kontrolę typów TypeScript oraz build produkcyjny.
 
 Backend korzysta z `dotnet test`. Projekty testowe powinny być umieszczane obok testowanego kodu jako `*.Tests.csproj` i podpinane do pliku solution; workflow CI już teraz uruchamia `dotnet test` na całym repozytorium i znajdzie je w momencie ich dodania.
 
@@ -112,6 +112,7 @@ Backend korzysta z `dotnet test`. Projekty testowe powinny być umieszczane obok
 # Frontend
 cd ksef_master_frontend
 npm run lint
+npm test
 npm run build
 
 # Backend

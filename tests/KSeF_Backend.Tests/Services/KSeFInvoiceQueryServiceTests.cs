@@ -38,8 +38,9 @@ public class KSeFInvoiceQueryServiceTests
     {
         return new KSeFInvoiceQueryService(
             httpClientFactory: null!,
+            environmentService: null!,
             authService: null!,
-            session: new KSeFSessionManager(NullLogger<KSeFSessionManager>.Instance),
+            session: null!,
             invoiceRepository: new FakeInvoiceRepository(invoices),
             logger: NullLogger<KSeFInvoiceQueryService>.Instance);
     }

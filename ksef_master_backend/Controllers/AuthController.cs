@@ -4,6 +4,7 @@ using KSeF.Backend.Models.Common;
 using KSeF.Backend.Models.Requests;
 using KSeF.Backend.Services.Interfaces.Auth;
 using KSeF.Backend.Services.KSeF.Session;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace KSeF.Backend.Controllers;
 
@@ -22,6 +23,7 @@ public class AuthController : BaseApiController
     }
 
     [HttpPost("register")]
+    [EnableRateLimiting("authentication")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         var result = await _userAuthService.RegisterAsync(request);
@@ -33,6 +35,7 @@ public class AuthController : BaseApiController
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("authentication")]
     public async Task<IActionResult> Login([FromBody] LoginAppRequest request)
     {
         var result = await _userAuthService.LoginAsync(request);

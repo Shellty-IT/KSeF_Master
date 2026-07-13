@@ -144,7 +144,7 @@ export function loadImportedData(): { draft: InvoiceDraft; draftId: string } | n
                 priceNet: item.unitPriceNet,
                 vatRate: parseVatRate(item.vatRate),
                 pkwiu: '',
-                discount: 0,
+                discount: item.discountPercent || 0,
             })),
             payment: {
                 method: (data.payment?.method as 'przelew' | 'gotówka') || 'przelew',

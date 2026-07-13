@@ -1,5 +1,4 @@
 ﻿// Infrastructure/Extensions/ServicesExtensions.cs
-using System.Security.Claims;
 using KSeF.Backend.Repositories;
 using KSeF.Backend.Services.Auth;
 using KSeF.Backend.Services.External;
@@ -16,6 +15,8 @@ using KSeF.Backend.Services.Pdf;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using KSeF.Backend.Services.KSeF.Common;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 namespace KSeF.Backend.Infrastructure.Extensions;
 
@@ -31,6 +32,7 @@ public static class ServicesExtensions
         RegisterPdfServices(builder.Services);
         RegisterValidators(builder.Services);
         RegisterOtherServices(builder.Services);
+        RegisterRateLimiting(builder.Services);
 
         return builder;
     }
@@ -38,22 +40,7 @@ public static class ServicesExtensions
     private static void RegisterSingletons(IServiceCollection services)
     {
         services.AddHttpContextAccessor();
-        services.AddSingleton<KSeFSessionStore>();
-
-        // KSeFSessionManager holds per-user KSeF tokens/keys. It must never be a plain
-        // singleton (that would leak one user's KSeF session to every other user) nor a
-        // plain scoped/transient instance (that would lose the session between requests).
-        // Instead each request resolves the KSeFSessionManager belonging to the currently
-        // authenticated user from the singleton KSeFSessionStore.
-        services.AddScoped(sp =>
-        {
-            var userIdClaim = sp.GetRequiredService<IHttpContextAccessor>()
-                .HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var userId = int.TryParse(userIdClaim, out var id) ? id : 0;
-
-            return sp.GetRequiredService<KSeFSessionStore>().GetSession(userId);
-        });
-
+        services.AddSingleton<KSeFSessionManager>();
         services.AddScoped<IExternalDraftService, ExternalDraftService>();
         services.AddSingleton<ExternalDraftValidator>();
         services.AddSingleton<ITokenEncryptionService, TokenEncryptionService>();
@@ -117,5 +104,23 @@ public static class ServicesExtensions
     private static void RegisterOtherServices(IServiceCollection services)
     {
         services.AddScoped<InvoiceXmlGenerator>();
+    }
+
+    private static void RegisterRateLimiting(IServiceCollection services)
+    {
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy("authentication", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+        });
     }
 }

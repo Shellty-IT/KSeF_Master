@@ -1,6 +1,7 @@
 // Services/KSeF/Invoice/KSeFInvoiceQueryService.cs
 using System.Text;
 using System.Text.Json;
+using KSeF.Backend.Infrastructure.KSeF;
 using KSeF.Backend.Models.Requests;
 using KSeF.Backend.Models.Responses.Invoice;
 using KSeF.Backend.Repositories;
@@ -12,6 +13,7 @@ namespace KSeF.Backend.Services.KSeF.Invoice;
 public class KSeFInvoiceQueryService : IKSeFInvoiceQueryService
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IKSeFEnvironmentService _environmentService;
     private readonly IKSeFAuthService _authService;
     private readonly KSeFSessionManager _session;
     private readonly IInvoiceRepository _invoiceRepository;
@@ -20,12 +22,14 @@ public class KSeFInvoiceQueryService : IKSeFInvoiceQueryService
 
     public KSeFInvoiceQueryService(
         IHttpClientFactory httpClientFactory,
+        IKSeFEnvironmentService environmentService,
         IKSeFAuthService authService,
         KSeFSessionManager session,
         IInvoiceRepository invoiceRepository,
         ILogger<KSeFInvoiceQueryService> logger)
     {
         _httpClientFactory = httpClientFactory;
+        _environmentService = environmentService;
         _authService = authService;
         _session = session;
         _invoiceRepository = invoiceRepository;
@@ -67,16 +71,20 @@ public class KSeFInvoiceQueryService : IKSeFInvoiceQueryService
         await _authService.RefreshTokenIfNeededAsync(cancellationToken);
 
         var httpClient = _httpClientFactory.CreateClient("KSeF");
+        var environment = _session.Environment
+            ?? throw new InvalidOperationException("Brak środowiska dla aktywnej sesji KSeF");
+        httpClient.BaseAddress = new Uri(_environmentService.GetApiBaseUrl(environment));
         var allInvoices = new List<InvoiceMetadata>();
-        var seenIds = new HashSet<string>();
+        var seenIds = new HashSet<string>(StringComparer.Ordinal);
         var maxResults = request.MaxResults ?? 9900;
         var sortOrder = request.SortDescending ? "Desc" : "Asc";
         var pageOffset = 0;
-        const int pageSize = 100;
-        const int maxPageOffset = 9900;
+        var pageSize = Math.Clamp(request.PageSize ?? 250, 10, 250);
+        const int maxApiResults = 10_000;
         var hasMore = true;
         var iteration = 0;
         const int maxIterations = 200;
+        DateTime? permanentStorageHwmDate = null;
         var currentFrom = request.DateRange!.From.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         var currentTo = request.DateRange.To.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
@@ -88,16 +96,43 @@ public class KSeFInvoiceQueryService : IKSeFInvoiceQueryService
         {
             iteration++;
 
-            var requestBodyJson = JsonSerializer.Serialize(new
+            var requestBody = new Dictionary<string, object?>
             {
-                subjectType = request.SubjectType,
-                dateRange = new
+                ["subjectType"] = request.SubjectType,
+                ["dateRange"] = new
                 {
                     dateType = request.DateRange.DateType,
                     from = currentFrom,
                     to = currentTo
                 }
-            });
+            };
+
+            if (request.AmountFrom.HasValue || request.AmountTo.HasValue)
+            {
+                requestBody["amount"] = new
+                {
+                    type = "Brutto",
+                    from = request.AmountFrom,
+                    to = request.AmountTo
+                };
+            }
+
+            var contractorNip = request.ContractorNip?.Trim();
+            if (!string.IsNullOrEmpty(contractorNip))
+            {
+                if (request.SubjectType == "Subject1")
+                    requestBody["buyerIdentifier"] = new { type = "Nip", value = contractorNip };
+                else
+                    requestBody["sellerNip"] = contractorNip;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.InvoiceNumber))
+                requestBody["invoiceNumber"] = request.InvoiceNumber.Trim();
+
+            if (!string.IsNullOrWhiteSpace(request.Currency))
+                requestBody["currencyCodes"] = new[] { request.Currency.Trim().ToUpperInvariant() };
+
+            var requestBodyJson = JsonSerializer.Serialize(requestBody, _jsonOptions);
 
             var url = $"invoices/query/metadata?sortOrder={sortOrder}&pageOffset={pageOffset}&pageSize={pageSize}";
 
@@ -105,17 +140,26 @@ public class KSeFInvoiceQueryService : IKSeFInvoiceQueryService
             httpRequest.Headers.Add("Authorization", $"Bearer {_session.AccessToken}");
             httpRequest.Content = new StringContent(requestBodyJson, Encoding.UTF8, "application/json");
 
-            var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+            using var response = await httpClient.SendAsync(httpRequest, cancellationToken);
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
 
             if (!response.IsSuccessStatusCode)
-                throw new HttpRequestException($"Query failed: {response.StatusCode} - {content}");
+                throw new KSeFApiException(
+                    $"Pobieranie metadanych faktur nie powiodło się: {KSeFErrorParser.Parse(content)}",
+                    response.StatusCode);
 
             using var doc = JsonDocument.Parse(content);
             var root = doc.RootElement;
 
             var pageHasMore = root.TryGetProperty("hasMore", out var hasMoreEl) && hasMoreEl.GetBoolean();
             var pageIsTruncated = root.TryGetProperty("isTruncated", out var truncEl) && truncEl.GetBoolean();
+            if (permanentStorageHwmDate == null &&
+                root.TryGetProperty("permanentStorageHwmDate", out var hwmEl) &&
+                hwmEl.ValueKind == JsonValueKind.String &&
+                hwmEl.TryGetDateTime(out var hwmDate))
+            {
+                permanentStorageHwmDate = hwmDate;
+            }
             var newCount = 0;
             var lastInvoiceDate = string.Empty;
 
@@ -126,15 +170,18 @@ public class KSeFInvoiceQueryService : IKSeFInvoiceQueryService
                     var invoice = JsonSerializer.Deserialize<InvoiceMetadata>(invEl.GetRawText(), _jsonOptions);
                     if (invoice == null) continue;
 
-                    if (seenIds.Add(invoice.KsefNumber))
-                    {
-                        allInvoices.Add(invoice);
-                        newCount++;
-                        lastInvoiceDate = GetInvoiceDateForCursor(invoice, request.DateRange.DateType);
+                    var cursorDate = GetInvoiceDateForCursor(invoice, request.DateRange.DateType);
+                    if (!string.IsNullOrEmpty(cursorDate))
+                        lastInvoiceDate = cursorDate;
 
-                        if (allInvoices.Count >= maxResults)
-                            break;
-                    }
+                    if (!seenIds.Add(invoice.KsefNumber) || !MatchesClientSideFilters(invoice, request))
+                        continue;
+
+                    allInvoices.Add(invoice);
+                    newCount++;
+
+                    if (allInvoices.Count >= maxResults)
+                        break;
                 }
             }
 
@@ -151,26 +198,27 @@ public class KSeFInvoiceQueryService : IKSeFInvoiceQueryService
             if (allInvoices.Count >= maxResults)
                 break;
 
-            if (pageIsTruncated || pageOffset + pageSize >= maxPageOffset)
+            if (pageIsTruncated || (pageOffset + 1) * pageSize >= maxApiResults)
             {
                 if (string.IsNullOrEmpty(lastInvoiceDate))
                     break;
 
-                var newFrom = NormalizeToUtcString(lastInvoiceDate);
-                if (newFrom == currentFrom)
+                var newCursor = NormalizeToUtcString(lastInvoiceDate);
+                if (request.SortDescending)
                 {
-                    if (DateTimeOffset.TryParse(lastInvoiceDate, out var parsedDate))
-                        newFrom = parsedDate.AddMilliseconds(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ");
-                    else
-                        break;
+                    if (newCursor == currentTo) break;
+                    currentTo = newCursor;
                 }
-
-                currentFrom = newFrom;
+                else
+                {
+                    if (newCursor == currentFrom) break;
+                    currentFrom = newCursor;
+                }
                 pageOffset = 0;
             }
             else
             {
-                pageOffset += pageSize;
+                pageOffset++;
             }
         }
 
@@ -185,13 +233,27 @@ public class KSeFInvoiceQueryService : IKSeFInvoiceQueryService
 
         return new InvoiceQueryResponse
         {
-            HasMore = false,
-            IsTruncated = allInvoices.Count >= maxResults,
+            HasMore = hasMore,
+            IsTruncated = hasMore || allInvoices.Count >= maxResults,
+            PermanentStorageHwmDate = permanentStorageHwmDate,
             Invoices = allInvoices,
             TotalCount = allInvoices.Count,
             FetchedAt = DateTime.UtcNow,
             PagesProcessed = iteration
         };
+    }
+
+    private static bool MatchesClientSideFilters(InvoiceMetadata invoice, InvoiceQueryRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.ContractorName))
+            return true;
+
+        var contractorName = request.SubjectType == "Subject1"
+            ? invoice.Buyer?.Name
+            : invoice.Seller?.Name;
+
+        return contractorName?.Contains(
+            request.ContractorName.Trim(), StringComparison.OrdinalIgnoreCase) == true;
     }
 
     private string GetInvoiceDateForCursor(InvoiceMetadata invoice, string dateType)

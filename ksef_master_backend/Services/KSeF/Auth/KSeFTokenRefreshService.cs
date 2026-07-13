@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using KSeF.Backend.Infrastructure.KSeF;
 using KSeF.Backend.Models.Responses.Auth;
@@ -9,12 +9,13 @@ namespace KSeF.Backend.Services.KSeF.Auth;
 
 public class KSeFTokenRefreshService : IKSeFTokenRefreshService
 {
+    private static readonly JsonSerializerOptions JsonOptions =
+        new() { PropertyNameCaseInsensitive = true };
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IKSeFEnvironmentService _environmentService;
     private readonly KSeFSessionManager _sessionManager;
     private readonly ILogger<KSeFTokenRefreshService> _logger;
-
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     public KSeFTokenRefreshService(
         IHttpClientFactory httpClientFactory,
@@ -43,26 +44,25 @@ public class KSeFTokenRefreshService : IKSeFTokenRefreshService
         try
         {
             var client = _httpClientFactory.CreateClient("KSeF");
-            client.BaseAddress = new Uri(_environmentService.GetApiBaseUrl("Test"));
+            var environment = _sessionManager.Environment
+                ?? throw new InvalidOperationException("Brak środowiska dla aktywnej sesji KSeF");
+            client.BaseAddress = new Uri(_environmentService.GetApiBaseUrl(environment));
 
-            var requestBody = new { refreshToken };
-            var content = new StringContent(
-                JsonSerializer.Serialize(requestBody),
-                Encoding.UTF8,
-                "application/json");
-
-            var response = await client.PostAsync("auth/token/refresh", content, ct);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "auth/token/refresh");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", refreshToken);
+            using var response = await client.SendAsync(request, ct);
             var responseBody = await response.Content.ReadAsStringAsync(ct);
 
             if (!response.IsSuccessStatusCode)
             {
-                var error = KSeFErrorParser.Parse(responseBody);
-                _logger.LogError("Token refresh failed: {Error}", error);
+                _logger.LogError(
+                    "Token refresh failed with status {Status}: {Error}",
+                    response.StatusCode,
+                    KSeFErrorParser.Parse(responseBody));
                 return false;
             }
 
             var result = JsonSerializer.Deserialize<TokenRefreshResponse>(responseBody, JsonOptions);
-
             if (result?.AccessToken == null)
             {
                 _logger.LogError("Token refresh response missing accessToken");

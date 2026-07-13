@@ -94,7 +94,7 @@ public class KSeFInvoiceSendService : IKSeFInvoiceSendService
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await SendAuthorizedAsync(HttpMethod.Post, url, content, cancellationToken);
+            using var response = await SendAuthorizedAsync(HttpMethod.Post, url, content, cancellationToken);
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
             _logger.LogInformation("Send invoice response: {Status}", response.StatusCode);
@@ -102,7 +102,7 @@ public class KSeFInvoiceSendService : IKSeFInvoiceSendService
             if (!response.IsSuccessStatusCode)
             {
                 var error = KSeFErrorParser.Parse(responseBody);
-                _logger.LogError("Send invoice error: {Error} | Body: {Body}", error, responseBody);
+                _logger.LogError("Send invoice error: {Error} | Status: {Status}", error, response.StatusCode);
                 return Fail($"Błąd wysyłania faktury: {error}");
             }
 
@@ -120,7 +120,7 @@ public class KSeFInvoiceSendService : IKSeFInvoiceSendService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Błąd wysyłania faktury: {Number}", request.InvoiceNumber);
-            return Fail(ex.Message);
+            return Fail("Nie udało się wysłać faktury do KSeF");
         }
     }
 
@@ -131,6 +131,9 @@ public class KSeFInvoiceSendService : IKSeFInvoiceSendService
         CancellationToken ct)
     {
         var client = _httpClientFactory.CreateClient("KSeF");
+        var environment = _session.Environment
+            ?? throw new InvalidOperationException("Brak środowiska dla aktywnej sesji KSeF");
+        client.BaseAddress = new Uri(_environmentService.GetApiBaseUrl(environment));
         using var request = new HttpRequestMessage(method, relativeUrl);
         request.Headers.Add("Authorization", $"Bearer {_session.AccessToken}");
         if (content != null)

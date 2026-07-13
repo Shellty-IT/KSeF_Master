@@ -144,7 +144,7 @@ public class InvoiceXmlGenerator
         if (groups.TryGetValue("23", out var g23))
         {
             var net = SumNet(g23);
-            var vat = net * 0.23m;
+            var vat = SumVat(g23, 0.23m);
             xml.AppendLine($"    <P_13_1>{FormatDecimal(net)}</P_13_1>");
             xml.AppendLine($"    <P_14_1>{FormatDecimal(vat)}</P_14_1>");
         }
@@ -152,7 +152,7 @@ public class InvoiceXmlGenerator
         if (groups.TryGetValue("22", out var g22))
         {
             var net = SumNet(g22);
-            var vat = net * 0.22m;
+            var vat = SumVat(g22, 0.22m);
             xml.AppendLine($"    <P_13_1>{FormatDecimal(net)}</P_13_1>");
             xml.AppendLine($"    <P_14_1>{FormatDecimal(vat)}</P_14_1>");
         }
@@ -160,7 +160,7 @@ public class InvoiceXmlGenerator
         if (groups.TryGetValue("8", out var g8))
         {
             var net = SumNet(g8);
-            var vat = net * 0.08m;
+            var vat = SumVat(g8, 0.08m);
             xml.AppendLine($"    <P_13_2>{FormatDecimal(net)}</P_13_2>");
             xml.AppendLine($"    <P_14_2>{FormatDecimal(vat)}</P_14_2>");
         }
@@ -168,7 +168,7 @@ public class InvoiceXmlGenerator
         if (groups.TryGetValue("7", out var g7))
         {
             var net = SumNet(g7);
-            var vat = net * 0.07m;
+            var vat = SumVat(g7, 0.07m);
             xml.AppendLine($"    <P_13_2>{FormatDecimal(net)}</P_13_2>");
             xml.AppendLine($"    <P_14_2>{FormatDecimal(vat)}</P_14_2>");
         }
@@ -176,7 +176,7 @@ public class InvoiceXmlGenerator
         if (groups.TryGetValue("5", out var g5))
         {
             var net = SumNet(g5);
-            var vat = net * 0.05m;
+            var vat = SumVat(g5, 0.05m);
             xml.AppendLine($"    <P_13_3>{FormatDecimal(net)}</P_13_3>");
             xml.AppendLine($"    <P_14_3>{FormatDecimal(vat)}</P_14_3>");
         }
@@ -250,7 +250,9 @@ public class InvoiceXmlGenerator
         for (var i = 0; i < items.Count; i++)
         {
             var item = items[i];
-            var net = item.Quantity * item.UnitPriceNet;
+            var grossLineNet = RoundMoney(item.Quantity * item.UnitPriceNet);
+            var net = CalculateLineNet(item);
+            var discountAmount = grossLineNet - net;
 
             xml.AppendLine("    <FaWiersz>");
             xml.AppendLine($"      <NrWierszaFa>{i + 1}</NrWierszaFa>");
@@ -258,6 +260,8 @@ public class InvoiceXmlGenerator
             xml.AppendLine($"      <P_8A>{EscapeXml(item.Unit)}</P_8A>");
             xml.AppendLine($"      <P_8B>{FormatQuantity(item.Quantity)}</P_8B>");
             xml.AppendLine($"      <P_9A>{FormatDecimal8(item.UnitPriceNet)}</P_9A>");
+            if (discountAmount > 0)
+                xml.AppendLine($"      <P_10>{FormatDecimal(discountAmount)}</P_10>");
             xml.AppendLine($"      <P_11>{FormatDecimal(net)}</P_11>");
             xml.AppendLine($"      <P_12>{MapVatRate(item.VatRate)}</P_12>");
             xml.AppendLine("    </FaWiersz>");
@@ -310,13 +314,13 @@ public class InvoiceXmlGenerator
 
         foreach (var item in items)
         {
-            var itemNet = item.Quantity * item.UnitPriceNet;
-            var itemVat = itemNet * ParseVatRateDecimal(item.VatRate);
+            var itemNet = CalculateLineNet(item);
+            var itemVat = RoundMoney(itemNet * ParseVatRateDecimal(item.VatRate));
             net += itemNet;
             vat += itemVat;
         }
 
-        return (net, vat, net + vat);
+        return (RoundMoney(net), RoundMoney(vat), RoundMoney(net + vat));
     }
 
     private static decimal ParseVatRateDecimal(string vatRate)
@@ -327,7 +331,19 @@ public class InvoiceXmlGenerator
     }
 
     private static decimal SumNet(List<InvoiceItem> items)
-        => items.Sum(i => i.Quantity * i.UnitPriceNet);
+        => RoundMoney(items.Sum(CalculateLineNet));
+
+    private static decimal SumVat(List<InvoiceItem> items, decimal rate)
+        => RoundMoney(items.Sum(item => RoundMoney(CalculateLineNet(item) * rate)));
+
+    private static decimal CalculateLineNet(InvoiceItem item)
+    {
+        var discount = Math.Clamp(item.DiscountPercent, 0m, 100m);
+        return RoundMoney(item.Quantity * item.UnitPriceNet * (1m - discount / 100m));
+    }
+
+    private static decimal RoundMoney(decimal value)
+        => Math.Round(value, 2, MidpointRounding.AwayFromZero);
 
     private static string NormalizeVatRateKey(string vatRate)
         => vatRate.Trim().ToLowerInvariant() switch

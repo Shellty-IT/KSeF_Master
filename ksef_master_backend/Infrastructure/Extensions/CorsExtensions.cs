@@ -5,7 +5,8 @@ public static class CorsExtensions
 {
     private static readonly string[] DefaultAllowedOrigins =
     [
-        "https://ksef-master.shellty.pl"
+        "https://ksef-master.shellty.pl",
+        "https://ksef-master.netlify.app"
     ];
 
     public static WebApplicationBuilder AddAppCors(this WebApplicationBuilder builder)

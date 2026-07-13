@@ -45,7 +45,7 @@ public class KSeFInvoiceSyncService : IKSeFInvoiceSyncService
         var existingNumbers = await _invoiceRepository.GetExistingKsefNumbersAsync(companyProfileId);
         var existingSet = new HashSet<string>(existingNumbers);
 
-        var subjectType = direction == "issued" ? "subject1" : "subject2";
+        var subjectType = direction == "issued" ? "Subject1" : "Subject2";
         var syncFrom = latestTimestamp.HasValue
             ? latestTimestamp.Value.AddSeconds(-30)
             : DateTime.UtcNow.AddMonths(-3);
@@ -56,7 +56,8 @@ public class KSeFInvoiceSyncService : IKSeFInvoiceSyncService
             direction, companyProfileId, syncFrom, syncTo);
 
         var windows = BuildDateWindows(syncFrom, syncTo, months: 1);
-        var allNewInvoices = new List<InvoiceModel>();
+        var invoicesToUpsert = new List<InvoiceModel>();
+        var newInvoiceCount = 0;
         var totalFetched = 0;
 
         foreach (var (windowFrom, windowTo) in windows)
@@ -79,27 +80,31 @@ public class KSeFInvoiceSyncService : IKSeFInvoiceSyncService
             var queryResult = await _queryService.QueryInvoicesAsync(request, cancellationToken);
             totalFetched += queryResult.TotalCount;
 
-            var newInvoices = queryResult.Invoices
-                .Where(i => !existingSet.Contains(i.KsefNumber))
+            var mappedInvoices = queryResult.Invoices
                 .Select(i => MapToInvoice(i, companyProfileId, nip, direction, environment))
                 .ToList();
 
-            foreach (var inv in newInvoices)
-                existingSet.Add(inv.KsefReferenceNumber);
+            var windowNewCount = 0;
+            foreach (var invoice in mappedInvoices)
+            {
+                if (existingSet.Add(invoice.KsefReferenceNumber))
+                    windowNewCount++;
+            }
 
-            allNewInvoices.AddRange(newInvoices);
+            newInvoiceCount += windowNewCount;
+            invoicesToUpsert.AddRange(mappedInvoices);
 
             _logger.LogInformation(
                 "Okno [{From} → {To}]: +{New} nowych faktur [{Direction}]",
-                windowFrom, windowTo, newInvoices.Count, direction);
+                windowFrom, windowTo, windowNewCount, direction);
         }
 
-        if (allNewInvoices.Count > 0)
+        if (invoicesToUpsert.Count > 0)
         {
-            await _invoiceRepository.UpsertManyAsync(allNewInvoices);
+            await _invoiceRepository.UpsertManyAsync(invoicesToUpsert);
             _logger.LogInformation(
-                "Zapisano łącznie {Count} nowych faktur [{Direction}]",
-                allNewInvoices.Count, direction);
+                "Zsynchronizowano {Count} faktur, w tym {NewCount} nowych [{Direction}]",
+                invoicesToUpsert.Count, newInvoiceCount, direction);
         }
         else
         {
@@ -108,7 +113,7 @@ public class KSeFInvoiceSyncService : IKSeFInvoiceSyncService
 
         return new InvoiceSyncResult
         {
-            NewCount = allNewInvoices.Count,
+            NewCount = newInvoiceCount,
             TotalFetched = totalFetched,
             SyncedAt = DateTime.UtcNow,
             Direction = direction
@@ -156,11 +161,22 @@ public class KSeFInvoiceSyncService : IKSeFInvoiceSyncService
             VatAmount = metadata.VatAmount,
             GrossAmount = metadata.GrossAmount,
             Currency = metadata.Currency,
-            InvoiceDate = ToUtc(metadata.InvoicingDate ?? metadata.PermanentStorageDate),
+            InvoiceDate = ParseIssueDate(metadata.IssueDate),
+            InvoicingDate = ToUtc(metadata.InvoicingDate),
             AcquisitionTimestamp = ToUtc(metadata.AcquisitionDate) ?? DateTime.UtcNow,
+            PermanentStorageDate = ToUtc(metadata.PermanentStorageDate),
             SyncedAt = DateTime.UtcNow,
+            InvoiceHash = metadata.InvoiceHash,
             KsefEnvironment = environment
         };
+    }
+
+    private static DateTime? ParseIssueDate(string? value)
+    {
+        if (!DateOnly.TryParseExact(value, "yyyy-MM-dd", out var date))
+            return null;
+
+        return DateTime.SpecifyKind(date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
     }
 
     private static DateTime? ToUtc(DateTime? dt)

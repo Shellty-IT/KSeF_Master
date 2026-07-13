@@ -12,4 +12,9 @@ public class LoginRequest
     /// Format: XXXXXXXX-XX-XXXXXXXXXX-XXXXXXXXXX-XX|nip-XXXXXXXXXX|hash
     /// </summary>
     public string KsefToken { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Środowisko KSeF: Test albo Production.
+    /// </summary>
+    public string KsefEnvironment { get; set; } = "Test";
 }

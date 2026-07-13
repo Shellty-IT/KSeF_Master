@@ -15,7 +15,7 @@ public class InvoiceQueryRequestValidatorTests
         SubjectType = "Subject1",
         DateRange = new DateRangeFilter
         {
-            DateType = "InvoicingDate",
+            DateType = "Invoicing",
             From = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             To = new DateTime(2025, 3, 31, 0, 0, 0, DateTimeKind.Utc)
         }
@@ -46,9 +46,9 @@ public class InvoiceQueryRequestValidatorTests
     }
 
     [Theory]
-    [InlineData("InvoicingDate")]
+    [InlineData("Issue")]
+    [InlineData("Invoicing")]
     [InlineData("PermanentStorage")]
-    [InlineData("AcquisitionTimestamp")]
     public void Valid_date_types_pass(string dateType)
     {
         var req = Valid();
@@ -78,22 +78,22 @@ public class InvoiceQueryRequestValidatorTests
     }
 
     [Fact]
-    public void Range_over_366_days_fails()
+    public void Range_over_three_months_fails()
     {
         var req = Valid();
         req.DateRange.From = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        req.DateRange.To = req.DateRange.From.AddDays(367);
+        req.DateRange.To = req.DateRange.From.AddDays(94);
         var result = _sut.Validate(req);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.ErrorMessage == "Zakres dat nie może przekraczać 12 miesięcy");
+        result.Errors.Should().Contain(e => e.ErrorMessage == "Zakres dat nie może przekraczać 3 miesięcy");
     }
 
     [Fact]
-    public void Range_of_exactly_366_days_passes()
+    public void Range_of_exactly_three_calendar_months_passes()
     {
         var req = Valid();
         req.DateRange.From = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        req.DateRange.To = req.DateRange.From.AddDays(366);
+        req.DateRange.To = req.DateRange.From.AddMonths(3);
         _sut.Validate(req).IsValid.Should().BeTrue();
     }
 
@@ -124,7 +124,7 @@ public class InvoiceQueryRequestValidatorTests
         req.MaxResults = 0;
         var result = _sut.Validate(req);
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.ErrorMessage == "MaxResults musi być >= 1");
+        result.Errors.Should().Contain(e => e.PropertyName == "MaxResults.Value");
     }
 
     [Fact]
@@ -133,5 +133,27 @@ public class InvoiceQueryRequestValidatorTests
         var req = Valid();
         req.MaxResults = 1;
         _sut.Validate(req).IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(9)]
+    [InlineData(251)]
+    public void Page_size_outside_api_limits_fails(int pageSize)
+    {
+        var req = Valid();
+        req.PageSize = pageSize;
+
+        _sut.Validate(req).IsValid.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("123")]
+    [InlineData("123456789X")]
+    public void Invalid_contractor_nip_fails(string nip)
+    {
+        var req = Valid();
+        req.ContractorNip = nip;
+
+        _sut.Validate(req).IsValid.Should().BeFalse();
     }
 }

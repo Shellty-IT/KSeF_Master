@@ -61,7 +61,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
 
-            entity.HasIndex(e => e.KsefReferenceNumber).IsUnique();
+            entity.HasIndex(e => new { e.CompanyProfileId, e.KsefReferenceNumber }).IsUnique();
             entity.HasIndex(e => e.CompanyProfileId);
             entity.HasIndex(e => new { e.CompanyProfileId, e.Direction });
             entity.HasIndex(e => new { e.CompanyProfileId, e.InvoiceDate });

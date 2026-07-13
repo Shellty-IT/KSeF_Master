@@ -17,7 +17,7 @@ import { loadSentInvoices } from '../../utils/sentInvoicesStorage';
 import { AlertTriangle, Loader2, FileDown } from 'lucide-react';
 
 export default function IssuedInvoices() {
-    const { isKsefConnected, needsCompanySetup } = useAuth();
+    const { isKsefConnected, needsCompanySetup, ksefEnvironment } = useAuth();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const { downloadingPdf, download } = useInvoicePdfDownload();
@@ -57,6 +57,7 @@ export default function IssuedInvoices() {
                 return {
                     source: 'local', invoiceNumber: localData.invoiceNumber, issueDate: localData.issueDate,
                     saleDate: localData.saleDate, issuePlace: localData.issuePlace, invoiceHash: localData.invoiceHash,
+                    ksefEnvironment: localData.ksefEnvironment || invoice.ksefEnvironment || ksefEnvironment,
                     ksefNumber: invoice.numerKsef,
                     seller: { nip: localData.sellerNip, name: localData.sellerName || '', address: localData.sellerAddress || '', bankAccount: localData.sellerBankAccount },
                     buyer: { nip: localData.buyerNip, name: localData.buyerName, address: localData.buyerAddress || '' },
@@ -69,6 +70,7 @@ export default function IssuedInvoices() {
                 return {
                     source: 'local', invoiceNumber: invoice.numerFaktury, issueDate: invoice.dataWystawienia,
                     invoiceHash: invoice.invoiceHash, ksefNumber: invoice.numerKsef,
+                    ksefEnvironment: invoice.ksefEnvironment || ksefEnvironment,
                     seller: { nip: invoice.nipSprzedawcy || '', name: invoice.nazwaSprzedawcy || '', address: '' },
                     buyer: { nip: invoice.nipKontrahenta, name: invoice.nazwaKontrahenta || '', address: '' },
                     totals: { net: invoice.kwotaNetto || 0, vat: invoice.kwotaVat || 0, gross: invoice.kwotaBrutto },
@@ -131,7 +133,7 @@ export default function IssuedInvoices() {
                             </div>
                         </div>
 
-                        <InvoiceFilters filters={filters} onChange={setFilters} onReset={resetFilters} showSuspiciousFilter={false} />
+                        <InvoiceFilters filters={filters} onChange={setFilters} onReset={resetFilters} />
 
                         <div className="ks-card overflow-hidden">
                             <div className="overflow-x-auto">

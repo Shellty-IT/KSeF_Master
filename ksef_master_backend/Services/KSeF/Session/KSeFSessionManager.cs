@@ -1,29 +1,26 @@
-﻿// Services/KSeFSessionManager.cs
+using System.Collections.Concurrent;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using KSeF.Backend.Models.Responses.Auth;
 using KSeF.Backend.Models.Responses.Certificate;
 
 namespace KSeF.Backend.Services.KSeF.Session;
 
+/// <summary>
+/// Stores the short-lived KSeF state in memory and isolates it by application user.
+/// The service is a singleton because a KSeF session spans multiple HTTP requests.
+/// </summary>
 public class KSeFSessionManager
 {
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<KSeFSessionManager> _logger;
+    private readonly ConcurrentDictionary<int, SessionState> _sessions = new();
 
-    private string? _nip;
-    private string? _accessToken;
-    private DateTime? _accessTokenExpiry;
-    private string? _refreshToken;
-    private DateTime? _refreshTokenExpiry;
-
-    private string? _onlineSessionReference;
-    private DateTime? _onlineSessionExpiry;
-    private byte[]? _aesKey;
-    private byte[]? _iv;
-
-    private readonly object _lock = new();
-    private List<CertificateInfo>? _cachedCertificates;
-
-    public KSeFSessionManager(ILogger<KSeFSessionManager> logger)
+    public KSeFSessionManager(
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<KSeFSessionManager> logger)
     {
+        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
     }
 
@@ -31,104 +28,153 @@ public class KSeFSessionManager
     {
         get
         {
-            lock (_lock)
+            var state = GetCurrentState();
+            lock (state.SyncRoot)
             {
-                return !string.IsNullOrEmpty(_accessToken) &&
-                       _accessTokenExpiry.HasValue &&
-                       _accessTokenExpiry.Value > DateTime.UtcNow;
+                return IsAuthenticatedCore(state);
             }
         }
     }
 
     public string? Nip
     {
-        get { lock (_lock) { return _nip; } }
+        get
+        {
+            var state = GetCurrentState();
+            lock (state.SyncRoot) { return state.Nip; }
+        }
+    }
+
+    public string? Environment
+    {
+        get
+        {
+            var state = GetCurrentState();
+            lock (state.SyncRoot) { return state.Environment; }
+        }
     }
 
     public string? AccessToken
     {
-        get { lock (_lock) { return IsAuthenticated ? _accessToken : null; } }
+        get
+        {
+            var state = GetCurrentState();
+            lock (state.SyncRoot)
+            {
+                return IsAuthenticatedCore(state) ? state.AccessToken : null;
+            }
+        }
     }
 
     public DateTime? AccessTokenExpiry
     {
-        get { lock (_lock) { return _accessTokenExpiry; } }
+        get
+        {
+            var state = GetCurrentState();
+            lock (state.SyncRoot) { return state.AccessTokenExpiry; }
+        }
     }
 
     public string? RefreshToken
     {
-        get { lock (_lock) { return _refreshToken; } }
+        get
+        {
+            var state = GetCurrentState();
+            lock (state.SyncRoot) { return state.RefreshToken; }
+        }
     }
 
     public byte[]? AesKey
     {
-        get { lock (_lock) { return _aesKey; } }
+        get
+        {
+            var state = GetCurrentState();
+            lock (state.SyncRoot) { return state.AesKey?.ToArray(); }
+        }
     }
 
     public byte[]? Iv
     {
-        get { lock (_lock) { return _iv; } }
+        get
+        {
+            var state = GetCurrentState();
+            lock (state.SyncRoot) { return state.Iv?.ToArray(); }
+        }
     }
 
     public string? SessionReferenceNumber
     {
-        get { lock (_lock) { return HasActiveOnlineSession ? _onlineSessionReference : null; } }
+        get
+        {
+            var state = GetCurrentState();
+            lock (state.SyncRoot)
+            {
+                return HasActiveOnlineSessionCore(state) ? state.OnlineSessionReference : null;
+            }
+        }
     }
 
     public DateTime? SessionValidUntil
     {
-        get { lock (_lock) { return _onlineSessionExpiry; } }
-    }
-
-    public void SetAuthSession(string nip, TokenRedeemResponse tokens)
-    {
-        lock (_lock)
+        get
         {
-            _nip = nip;
-            _accessToken = tokens.AccessToken?.Token;
-            _accessTokenExpiry = tokens.AccessToken?.ValidUntil;
-            _refreshToken = tokens.RefreshToken?.Token;
-            _refreshTokenExpiry = tokens.RefreshToken?.ValidUntil;
-
-            _logger.LogInformation("Auth session set for NIP: {Nip}, AccessToken valid until: {Expiry}",
-                nip, _accessTokenExpiry);
+            var state = GetCurrentState();
+            lock (state.SyncRoot) { return state.OnlineSessionExpiry; }
         }
     }
 
-    public void SetAuthSessionFromStatus(string nip, AuthStatusResponse status)
+    public void SetAuthSession(string nip, TokenRedeemResponse tokens, string environment)
     {
-        lock (_lock)
+        var state = GetCurrentState();
+        lock (state.SyncRoot)
         {
-            _nip = nip;
-            _accessToken = status.AccessToken?.Token;
-            _accessTokenExpiry = status.AccessToken?.ValidUntil;
-            _refreshToken = status.RefreshToken?.Token;
-            _refreshTokenExpiry = status.RefreshToken?.ValidUntil;
+            state.Nip = nip;
+            state.Environment = environment;
+            state.AccessToken = tokens.AccessToken?.Token;
+            state.AccessTokenExpiry = tokens.AccessToken?.ValidUntil;
+            state.RefreshToken = tokens.RefreshToken?.Token;
+            state.RefreshTokenExpiry = tokens.RefreshToken?.ValidUntil;
 
-            _logger.LogInformation("Auth session set from status for NIP: {Nip}", nip);
+            // An online session belongs to the access token and environment that created it.
+            ClearOnlineSessionCore(state);
+
+            _logger.LogInformation(
+                "Auth session set for user {UserId}, NIP {Nip}, environment {Environment}, valid until {Expiry}",
+                GetCurrentUserId(), nip, environment, state.AccessTokenExpiry);
+        }
+    }
+
+    public void SetAuthSessionFromStatus(string nip, AuthStatusResponse status, string environment)
+    {
+        var state = GetCurrentState();
+        lock (state.SyncRoot)
+        {
+            state.Nip = nip;
+            state.Environment = environment;
+            state.AccessToken = status.AccessToken?.Token;
+            state.AccessTokenExpiry = status.AccessToken?.ValidUntil;
+            state.RefreshToken = status.RefreshToken?.Token;
+            state.RefreshTokenExpiry = status.RefreshToken?.ValidUntil;
+            ClearOnlineSessionCore(state);
+
+            _logger.LogInformation(
+                "Auth session restored for user {UserId}, NIP {Nip}, environment {Environment}",
+                GetCurrentUserId(), nip, environment);
         }
     }
 
     public void ClearAuthSession()
     {
-        lock (_lock)
+        var userId = GetCurrentUserId();
+        if (_sessions.TryRemove(userId, out var state))
         {
-            var wasAuthenticated = IsAuthenticated;
+            lock (state.SyncRoot)
+            {
+                if (IsAuthenticatedCore(state))
+                    _logger.LogInformation("Auth session cleared for user {UserId}", userId);
 
-            _nip = null;
-            _accessToken = null;
-            _accessTokenExpiry = null;
-            _refreshToken = null;
-            _refreshTokenExpiry = null;
-
-            _onlineSessionReference = null;
-            _onlineSessionExpiry = null;
-            _aesKey = null;
-            _iv = null;
-            _cachedCertificates = null;
-
-            if (wasAuthenticated)
-                _logger.LogInformation("Auth session cleared");
+                ClearSensitiveState(state);
+            }
         }
     }
 
@@ -136,23 +182,25 @@ public class KSeFSessionManager
     {
         get
         {
-            lock (_lock)
+            var state = GetCurrentState();
+            lock (state.SyncRoot)
             {
-                if (!_accessTokenExpiry.HasValue) return false;
-                var timeUntilExpiry = _accessTokenExpiry.Value - DateTime.UtcNow;
-                return timeUntilExpiry.TotalMinutes < 10;
+                if (!state.AccessTokenExpiry.HasValue) return false;
+                return state.AccessTokenExpiry.Value - DateTime.UtcNow < TimeSpan.FromMinutes(10);
             }
         }
     }
 
     public void UpdateAccessToken(TokenRefreshResponse refreshResponse)
     {
-        lock (_lock)
+        var state = GetCurrentState();
+        lock (state.SyncRoot)
         {
-            _accessToken = refreshResponse.AccessToken?.Token;
-            _accessTokenExpiry = refreshResponse.AccessToken?.ValidUntil;
-
-            _logger.LogInformation("Access token refreshed, valid until: {Expiry}", _accessTokenExpiry);
+            state.AccessToken = refreshResponse.AccessToken?.Token;
+            state.AccessTokenExpiry = refreshResponse.AccessToken?.ValidUntil;
+            _logger.LogInformation(
+                "Access token refreshed for user {UserId}, valid until {Expiry}",
+                GetCurrentUserId(), state.AccessTokenExpiry);
         }
     }
 
@@ -160,76 +208,143 @@ public class KSeFSessionManager
     {
         get
         {
-            lock (_lock)
-            {
-                return !string.IsNullOrEmpty(_onlineSessionReference) &&
-                       _onlineSessionExpiry.HasValue &&
-                       _onlineSessionExpiry.Value > DateTime.UtcNow;
-            }
+            var state = GetCurrentState();
+            lock (state.SyncRoot) { return HasActiveOnlineSessionCore(state); }
         }
     }
 
-    public string? OnlineSessionReference
-    {
-        get { lock (_lock) { return HasActiveOnlineSession ? _onlineSessionReference : null; } }
-    }
+    public string? OnlineSessionReference => SessionReferenceNumber;
 
     public void SetOnlineSession(string referenceNumber, DateTime validUntil, byte[] aesKey, byte[] iv)
     {
-        lock (_lock)
+        var state = GetCurrentState();
+        lock (state.SyncRoot)
         {
-            _onlineSessionReference = referenceNumber;
-            _onlineSessionExpiry = validUntil;
-            _aesKey = aesKey;
-            _iv = iv;
+            state.OnlineSessionReference = referenceNumber;
+            state.OnlineSessionExpiry = validUntil;
+            state.AesKey = aesKey.ToArray();
+            state.Iv = iv.ToArray();
 
-            _logger.LogInformation("Online session set: {Ref}, valid until: {Expiry}",
-                referenceNumber, validUntil);
+            _logger.LogInformation(
+                "Online session set for user {UserId}: {ReferenceNumber}, valid until {Expiry}",
+                GetCurrentUserId(), referenceNumber, validUntil);
         }
     }
 
     public void ClearOnlineSession()
     {
-        lock (_lock)
+        var state = GetCurrentState();
+        lock (state.SyncRoot)
         {
-            var hadSession = HasActiveOnlineSession;
-            _onlineSessionReference = null;
-            _onlineSessionExpiry = null;
-            _aesKey = null;
-            _iv = null;
-
+            var hadSession = HasActiveOnlineSessionCore(state);
+            ClearOnlineSessionCore(state);
             if (hadSession)
-                _logger.LogInformation("Online session cleared");
+                _logger.LogInformation("Online session cleared for user {UserId}", GetCurrentUserId());
         }
     }
 
     public object GetSessionInfo()
     {
-        lock (_lock)
+        var state = GetCurrentState();
+        lock (state.SyncRoot)
         {
             return new
             {
-                isAuthenticated = IsAuthenticated,
-                nip = _nip,
-                accessTokenExpiry = _accessTokenExpiry,
-                hasRefreshToken = !string.IsNullOrEmpty(_refreshToken),
-                hasOnlineSession = HasActiveOnlineSession,
-                onlineSessionExpiry = _onlineSessionExpiry
+                isAuthenticated = IsAuthenticatedCore(state),
+                nip = state.Nip,
+                environment = state.Environment,
+                accessTokenExpiry = state.AccessTokenExpiry,
+                hasRefreshToken = !string.IsNullOrEmpty(state.RefreshToken),
+                hasOnlineSession = HasActiveOnlineSessionCore(state),
+                onlineSessionExpiry = state.OnlineSessionExpiry
             };
         }
     }
 
-    public List<CertificateInfo>? GetCachedCertificates()
+    public List<CertificateInfo>? GetCachedCertificates(string environment)
     {
-        lock (_lock) { return _cachedCertificates; }
+        var state = GetCurrentState();
+        lock (state.SyncRoot)
+        {
+            return state.CachedCertificates.TryGetValue(environment, out var certificates)
+                ? certificates.ToList()
+                : null;
+        }
     }
 
-    public void SetCertificates(List<CertificateInfo> certificates)
+    public void SetCertificates(string environment, List<CertificateInfo> certificates)
     {
-        lock (_lock)
+        var state = GetCurrentState();
+        lock (state.SyncRoot)
         {
-            _cachedCertificates = certificates;
-            _logger.LogInformation("Cached {Count} certificates", certificates.Count);
+            state.CachedCertificates[environment] = certificates.ToList();
+            _logger.LogInformation(
+                "Cached {Count} public certificates for user {UserId}, environment {Environment}",
+                certificates.Count, GetCurrentUserId(), environment);
         }
+    }
+
+    private SessionState GetCurrentState()
+    {
+        var userId = GetCurrentUserId();
+        return _sessions.GetOrAdd(userId, static _ => new SessionState());
+    }
+
+    private int GetCurrentUserId()
+    {
+        var claim = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(claim, out var userId))
+            throw new UnauthorizedAccessException("Brak kontekstu uwierzytelnionego użytkownika");
+
+        return userId;
+    }
+
+    private static bool IsAuthenticatedCore(SessionState state) =>
+        !string.IsNullOrEmpty(state.AccessToken) &&
+        state.AccessTokenExpiry.HasValue &&
+        state.AccessTokenExpiry.Value > DateTime.UtcNow;
+
+    private static bool HasActiveOnlineSessionCore(SessionState state) =>
+        !string.IsNullOrEmpty(state.OnlineSessionReference) &&
+        state.OnlineSessionExpiry.HasValue &&
+        state.OnlineSessionExpiry.Value > DateTime.UtcNow;
+
+    private static void ClearOnlineSessionCore(SessionState state)
+    {
+        state.OnlineSessionReference = null;
+        state.OnlineSessionExpiry = null;
+        if (state.AesKey is not null) CryptographicOperations.ZeroMemory(state.AesKey);
+        if (state.Iv is not null) CryptographicOperations.ZeroMemory(state.Iv);
+        state.AesKey = null;
+        state.Iv = null;
+    }
+
+    private static void ClearSensitiveState(SessionState state)
+    {
+        state.Nip = null;
+        state.Environment = null;
+        state.AccessToken = null;
+        state.AccessTokenExpiry = null;
+        state.RefreshToken = null;
+        state.RefreshTokenExpiry = null;
+        ClearOnlineSessionCore(state);
+        state.CachedCertificates.Clear();
+    }
+
+    private sealed class SessionState
+    {
+        public object SyncRoot { get; } = new();
+        public string? Nip { get; set; }
+        public string? Environment { get; set; }
+        public string? AccessToken { get; set; }
+        public DateTime? AccessTokenExpiry { get; set; }
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpiry { get; set; }
+        public string? OnlineSessionReference { get; set; }
+        public DateTime? OnlineSessionExpiry { get; set; }
+        public byte[]? AesKey { get; set; }
+        public byte[]? Iv { get; set; }
+        public Dictionary<string, List<CertificateInfo>> CachedCertificates { get; } =
+            new(StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -26,10 +26,10 @@ public class RequestLoggingMiddleware
         }
 
         var method = context.Request.Method;
-        var query = context.Request.QueryString.HasValue ? context.Request.QueryString.Value : string.Empty;
         var sw = Stopwatch.StartNew();
 
-        _logger.LogInformation("→ {Method} {Path}{Query}", method, path, query);
+        // Query strings may contain identifiers or secrets. Keep request logs metadata-only.
+        _logger.LogInformation("→ {Method} {Path}", method, path);
 
         try
         {

@@ -17,6 +17,11 @@ public class GeneratePdfRequest
     /// </summary>
     public string? InvoiceHash { get; set; }
 
+    /// <summary>
+    /// Środowisko, z którego pochodzi faktura; decyduje o domenie kodu QR.
+    /// </summary>
+    public string KsefEnvironment { get; set; } = "Test";
+
     // === Dane faktury (wymagane dla source="local") ===
 
     public string? InvoiceNumber { get; set; }

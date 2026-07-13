@@ -67,6 +67,9 @@ public class InvoiceItem
     [JsonPropertyName("unitPriceNet")]
     public decimal UnitPriceNet { get; set; }
 
+    [JsonPropertyName("discountPercent")]
+    public decimal DiscountPercent { get; set; }
+
     [JsonPropertyName("vatRate")]
     public string VatRate { get; set; } = "23";
 }

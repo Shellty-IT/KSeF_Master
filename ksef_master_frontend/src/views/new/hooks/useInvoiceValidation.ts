@@ -27,6 +27,8 @@ export function useInvoiceValidation() {
             if (!l.name.trim()) errs.push(`Pozycja #${idx + 1}: nazwa jest wymagana.`);
             if (!(l.qty > 0)) errs.push(`Pozycja #${idx + 1}: ilość musi być dodatnia.`);
             if (!(l.priceNet > 0)) errs.push(`Pozycja #${idx + 1}: cena netto musi być dodatnia.`);
+            if ((l.discount || 0) < 0 || (l.discount || 0) > 100)
+                errs.push(`Pozycja #${idx + 1}: rabat musi mieścić się w zakresie od 0 do 100%.`);
         });
 
         if (Math.abs(round2(totals.net + totals.vat) - totals.gross) > 0.01) {

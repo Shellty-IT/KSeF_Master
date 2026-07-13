@@ -1,17 +1,18 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { useAuth } from './hooks/useAuth';
 import StartView from './views/start/StartView';
 import LoginView from './views/start/LoginView';
 import RegisterView from './views/start/RegisterView';
-import Dashboard from './views/dashboard/Dashboard';
-import ReceivedInvoices from './views/received/ReceivedInvoices';
-import IssuedInvoices from './views/issued/IssuedInvoices';
-import NewInvoice from './views/new/NewInvoice';
-import ImportedDrafts from './views/imported/ImportedDrafts';
-import ClientsView from './views/clients/ClientsView';
-import Reports from './views/reports/Reports';
-import Settings from './views/settings/Settings';
-import type { ReactNode } from 'react';
+
+const Dashboard = lazy(() => import('./views/dashboard/Dashboard'));
+const ReceivedInvoices = lazy(() => import('./views/received/ReceivedInvoices'));
+const IssuedInvoices = lazy(() => import('./views/issued/IssuedInvoices'));
+const NewInvoice = lazy(() => import('./views/new/NewInvoice'));
+const ImportedDrafts = lazy(() => import('./views/imported/ImportedDrafts'));
+const ClientsView = lazy(() => import('./views/clients/ClientsView'));
+const Reports = lazy(() => import('./views/reports/Reports'));
+const Settings = lazy(() => import('./views/settings/Settings'));
 
 function LoadingScreen() {
     return (
@@ -75,7 +76,9 @@ function AppRoutes() {
 export default function App() {
     return (
         <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <AppRoutes />
+            <Suspense fallback={<LoadingScreen />}>
+                <AppRoutes />
+            </Suspense>
         </HashRouter>
     );
 }

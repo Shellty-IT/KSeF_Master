@@ -102,16 +102,11 @@ public class KSeFInvoiceController : BaseApiController
         if (company == null)
             return BadRequest(ApiResponse<object?>.Fail("Brak skonfigurowanej firmy"));
 
-        _logger.LogInformation("GetInvoices (cache only): companyProfileId={Id}", company.Id);
+        _logger.LogInformation("GetInvoices: querying KSeF for companyProfileId={Id}", company.Id);
 
-        var cached = await _queryService.GetCachedInvoicesAsync(company.Id, request);
+        var response = await _queryService.QueryInvoicesAsync(request, ct);
 
-        return Ok(ApiResponse<object>.Ok(new
-        {
-            invoices = cached,
-            totalCount = cached.Count,
-            fetchedAt = DateTime.UtcNow
-        }));
+        return Ok(ApiResponse<object>.Ok(response));
     }
 
     [HttpGet("invoices/stats")]
@@ -195,4 +190,5 @@ public class KSeFInvoiceController : BaseApiController
         var invalid = Path.GetInvalidFileNameChars();
         return string.Join("-", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries));
     }
+
 }

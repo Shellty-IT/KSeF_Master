@@ -24,10 +24,13 @@ public class Invoice
     public string? Currency { get; set; }
 
     public DateTime? InvoiceDate { get; set; }
+    public DateTime? InvoicingDate { get; set; }
     public DateTime AcquisitionTimestamp { get; set; }
+    public DateTime? PermanentStorageDate { get; set; }
     public DateTime SyncedAt { get; set; } = DateTime.UtcNow;
 
     public string? XmlContent { get; set; }
+    public string? InvoiceHash { get; set; }
     public string KsefEnvironment { get; set; } = "Test";
 
     public CompanyProfile CompanyProfile { get; set; } = null!;

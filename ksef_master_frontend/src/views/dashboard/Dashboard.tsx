@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { getInvoices, type CachedInvoice } from '../../services/ksefApi';
+import { getInvoices, type InvoiceMetadata } from '../../services/ksefApi';
 import { useAuth } from '../../hooks/useAuth';
 import KsefStatusAlerts from '../../components/features/ksef/KsefStatusAlerts';
 import SideNav from '../../components/layout/SideNav';
@@ -11,75 +11,50 @@ import {
     RefreshCw, Loader2,
 } from 'lucide-react';
 
-const CHART_DAY_COUNT = 14;
-
-function buildDailyCounts(invoices: CachedInvoice[]): number[] {
-    const counts = new Array(CHART_DAY_COUNT).fill(0);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    for (const inv of invoices) {
-        if (!inv.invoiceDate) continue;
-        const date = new Date(inv.invoiceDate);
-        date.setHours(0, 0, 0, 0);
-        const dayIndex = CHART_DAY_COUNT - 1 - Math.round((today.getTime() - date.getTime()) / 86_400_000);
-        if (dayIndex >= 0 && dayIndex < CHART_DAY_COUNT) {
-            counts[dayIndex] += 1;
-        }
-    }
-
-    return counts;
-}
-
 export default function Dashboard() {
     const { isKsefConnected, needsCompanySetup, user, nip } = useAuth();
     const navigate = useNavigate();
 
-    const dateRange = useMemo(() => {
-        const now = new Date();
-        const from = new Date(now);
-        from.setMonth(from.getMonth() - 1);
-        return { from: from.toISOString(), to: now.toISOString() };
-    }, []);
-
-    const { data: receivedData, isLoading, isFetching, error, refetch } = useQuery({
-        queryKey: ['receivedInvoices', nip],
+    const { data: dashboardData, isLoading, isFetching, error, refetch } = useQuery({
+        queryKey: ['dashboardInvoices', nip],
         queryFn: async () => {
-            const response = await getInvoices({
-                subjectType: 'Subject2',
-                dateRange: { dateType: 'PermanentStorage', ...dateRange },
-            });
+            const now = new Date();
+            const from = new Date(now);
+            from.setMonth(from.getMonth() - 1);
 
-            if (!response.success) {
-                throw new Error(response.error || 'Błąd pobierania faktur');
+            const dateRange = {
+                dateType: 'PermanentStorage' as const,
+                from: from.toISOString(),
+                to: now.toISOString(),
+            };
+            const [issuedResponse, receivedResponse] = await Promise.all([
+                getInvoices({ subjectType: 'Subject1', dateRange }),
+                getInvoices({ subjectType: 'Subject2', dateRange }),
+            ]);
+
+            if (!issuedResponse.success || !receivedResponse.success) {
+                throw new Error(
+                    issuedResponse.error || receivedResponse.error || 'Błąd pobierania faktur'
+                );
             }
 
-            return response.data?.invoices || [];
+            return {
+                issued: issuedResponse.data?.invoices || [],
+                received: receivedResponse.data?.invoices || [],
+            };
         },
         enabled: isKsefConnected,
         staleTime: 60_000,
     });
 
-    const { data: issuedData } = useQuery({
-        queryKey: ['issuedInvoicesSummary', nip],
-        queryFn: async () => {
-            const response = await getInvoices({
-                subjectType: 'Subject1',
-                dateRange: { dateType: 'PermanentStorage', ...dateRange },
-            });
-
-            if (!response.success) {
-                throw new Error(response.error || 'Błąd pobierania faktur');
-            }
-
-            return response.data?.invoices || [];
-        },
-        enabled: isKsefConnected,
-        staleTime: 60_000,
-    });
-
-    const invoices: CachedInvoice[] = useMemo(() => receivedData || [], [receivedData]);
-    const issuedInvoices: CachedInvoice[] = useMemo(() => issuedData || [], [issuedData]);
+    const invoices: InvoiceMetadata[] = useMemo(
+        () => dashboardData?.received || [],
+        [dashboardData]
+    );
+    const issuedInvoices: InvoiceMetadata[] = useMemo(
+        () => dashboardData?.issued || [],
+        [dashboardData]
+    );
 
     const errorMessage = error
         ? (error as Error).message || 'Nie udało się pobrać faktur.'
@@ -91,18 +66,32 @@ export default function Dashboard() {
     }), [invoices]);
 
     const chartDays = useMemo(() => {
-        const issuedCounts = buildDailyCounts(issuedInvoices);
-        const receivedCounts = buildDailyCounts(invoices);
-        return Array.from({ length: CHART_DAY_COUNT }, (_, i) => ({
-            day: i + 1,
-            issued: issuedCounts[i],
-            received: receivedCounts[i],
-        }));
-    }, [issuedInvoices, invoices]);
+        const issuedCounts = new Map<string, number>();
+        const receivedCounts = new Map<string, number>();
+        const countByDate = (items: InvoiceMetadata[], target: Map<string, number>) => {
+            for (const invoice of items) {
+                const date = invoice.issueDate || invoice.invoicingDate?.slice(0, 10);
+                if (date) target.set(date, (target.get(date) || 0) + 1);
+            }
+        };
+        countByDate(issuedInvoices, issuedCounts);
+        countByDate(invoices, receivedCounts);
 
-    const balanceIssued = useMemo(() => chartDays.reduce((sum, d) => sum + d.issued, 0), [chartDays]);
-    const balanceReceived = useMemo(() => chartDays.reduce((sum, d) => sum + d.received, 0), [chartDays]);
-    const chartMax = Math.max(1, ...chartDays.map((d) => Math.max(d.issued, d.received)));
+        return Array.from({ length: 14 }, (_, index) => {
+            const date = new Date();
+            date.setUTCHours(0, 0, 0, 0);
+            date.setUTCDate(date.getUTCDate() - (13 - index));
+            const key = date.toISOString().slice(0, 10);
+            return {
+                day: key,
+                issued: issuedCounts.get(key) || 0,
+                received: receivedCounts.get(key) || 0,
+            };
+        });
+    }, [invoices, issuedInvoices]);
+    const balanceIssued = chartDays.reduce((sum, day) => sum + day.issued, 0);
+    const balanceReceived = chartDays.reduce((sum, day) => sum + day.received, 0);
+    const chartMax = Math.max(1, ...chartDays.map(day => Math.max(day.issued, day.received)));
 
     const subtitleText = useMemo(() => {
         if (needsCompanySetup) return 'Skonfiguruj firmę, aby rozpocząć pracę z KSeF';
@@ -235,18 +224,18 @@ export default function Dashboard() {
                                         <tbody className="divide-y divide-border">
                                             {invoices.length > 0 ? (
                                                 invoices.slice(0, 10).map((row) => (
-                                                    <tr key={row.ksefReferenceNumber} className="hover:bg-muted/40 transition-colors border-b border-border last:border-0">
-                                                        <td className="px-6 py-3 font-mono text-[12px] text-foreground/70">{row.ksefReferenceNumber}</td>
+                                                    <tr key={row.ksefNumber} className="hover:bg-muted/40 transition-colors border-b border-border last:border-0">
+                                                        <td className="px-6 py-3 font-mono text-[12px] text-foreground/70">{row.ksefNumber}</td>
                                                         <td className="px-4 py-3 font-medium text-foreground">{row.invoiceNumber || '—'}</td>
-                                                        <td className="px-4 py-3 text-foreground">{row.sellerName || '—'}</td>
-                                                        <td className="px-4 py-3 font-mono text-[12px] text-foreground">{row.sellerNip || '—'}</td>
+                                                        <td className="px-4 py-3 text-foreground">{row.seller?.name || '—'}</td>
+                                                        <td className="px-4 py-3 font-mono text-[12px] text-foreground">{row.seller?.nip || '—'}</td>
                                                         <td className="px-4 py-3 text-right font-semibold text-foreground">
                                                             {row.grossAmount?.toLocaleString('pl-PL', {
                                                                 style: 'currency',
                                                                 currency: row.currency || 'PLN',
                                                             }) || '—'}
                                                         </td>
-                                                        <td className="px-6 py-3 text-foreground/70">{row.invoiceDate?.split('T')[0] || '—'}</td>
+                                                        <td className="px-6 py-3 text-foreground/70">{row.issueDate || '—'}</td>
                                                     </tr>
                                                 ))
                                             ) : (

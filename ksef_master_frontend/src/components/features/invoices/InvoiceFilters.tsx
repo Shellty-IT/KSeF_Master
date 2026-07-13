@@ -1,23 +1,21 @@
 import { useState } from 'react';
 import type { InvoiceFilters as IInvoiceFilters } from '../../../types/filters';
-import { ChevronDown, ChevronRight, X, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronRight, X } from 'lucide-react';
 
 interface InvoiceFiltersProps {
     filters: IInvoiceFilters;
     onChange: (filters: IInvoiceFilters) => void;
     onReset: () => void;
-    showSuspiciousFilter?: boolean;
 }
 
 export default function InvoiceFilters({
     filters,
     onChange,
     onReset,
-    showSuspiciousFilter = false,
 }: InvoiceFiltersProps) {
     const [isExpanded, setIsExpanded] = useState(false);
 
-    const handleChange = (field: keyof IInvoiceFilters, value: string | boolean) => {
+    const handleChange = (field: keyof IInvoiceFilters, value: string) => {
         onChange({ ...filters, [field]: value });
     };
 
@@ -29,8 +27,7 @@ export default function InvoiceFilters({
         filters.contractorNip ||
         filters.contractorName ||
         filters.invoiceNumber ||
-        filters.currency ||
-        filters.showOnlySuspicious
+        filters.currency
     );
 
     return (
@@ -53,20 +50,6 @@ export default function InvoiceFilters({
                             Aktywne
                         </span>
                     )}
-                    {showSuspiciousFilter && (
-                        <button
-                            type="button"
-                            className={`flex items-center gap-1 rounded-full border px-3 py-0.5 text-[12px] font-medium transition ${
-                                filters.showOnlySuspicious
-                                    ? 'border-warning/40 bg-warning/15 text-warning-foreground'
-                                    : 'border-border bg-card text-muted-foreground hover:border-warning/40 hover:bg-warning/10'
-                            }`}
-                            onClick={() => handleChange('showOnlySuspicious', !filters.showOnlySuspicious)}
-                        >
-                            <AlertTriangle className="h-3 w-3" />
-                            Podejrzane
-                        </button>
-                    )}
                 </div>
                 {hasActiveFilters && (
                     <button
@@ -82,7 +65,7 @@ export default function InvoiceFilters({
 
             {isExpanded && (
                 <div className="border-t border-border px-4 pb-4 pt-3">
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                         <div className="space-y-1">
                             <label className="ks-label">Data od</label>
                             <input type="date" className="ks-input" value={filters.dateFrom}

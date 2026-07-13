@@ -1,5 +1,7 @@
 ﻿using KSeF.Backend.Services.Interfaces.KSeF;
 
+using System.Globalization;
+
 namespace KSeF.Backend.Services.Pdf;
 
 public class PdfUrlBuilder
@@ -13,41 +15,65 @@ public class PdfUrlBuilder
 
     public string BuildVerificationUrl(string sellerNip, string issueDate, string invoiceHash, string environment)
     {
-        if (string.IsNullOrEmpty(sellerNip) || string.IsNullOrEmpty(issueDate) || string.IsNullOrEmpty(invoiceHash))
+        if (!IsNip(sellerNip))
             return string.Empty;
 
-        var baseUrl = _environmentService.GetQrBaseUrl(environment);
         var formattedDate = FormatDateForUrl(issueDate);
         var hashBase64Url = ConvertToBase64Url(invoiceHash);
+        if (formattedDate is null || hashBase64Url is null)
+            return string.Empty;
+
+        var baseUrl = _environmentService.GetQrBaseUrl(environment).TrimEnd('/');
 
         return $"{baseUrl}/client-app/invoice/{sellerNip}/{formattedDate}/{hashBase64Url}";
     }
 
     public string BuildQrUrl(string sellerNip, string issueDate, string invoiceHash, string environment)
     {
-        if (string.IsNullOrEmpty(sellerNip) || string.IsNullOrEmpty(issueDate) || string.IsNullOrEmpty(invoiceHash))
+        if (!IsNip(sellerNip))
             return string.Empty;
 
-        var baseUrl = _environmentService.GetQrBaseUrl(environment);
         var formattedDate = FormatDateForUrl(issueDate);
         var hashBase64Url = ConvertToBase64Url(invoiceHash);
+        if (formattedDate is null || hashBase64Url is null)
+            return string.Empty;
+
+        var baseUrl = _environmentService.GetQrBaseUrl(environment).TrimEnd('/');
 
         return $"{baseUrl}/{sellerNip}/{formattedDate}/{hashBase64Url}";
     }
 
-    private static string FormatDateForUrl(string issueDate)
+    private static string? FormatDateForUrl(string issueDate)
     {
-        var parts = issueDate.Split('-');
-        return parts.Length == 3
-            ? $"{parts[2]}-{parts[1]}-{parts[0]}"
-            : issueDate;
+        return DateOnly.TryParseExact(
+            issueDate,
+            "yyyy-MM-dd",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var date)
+            ? date.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture)
+            : null;
     }
 
-    private static string ConvertToBase64Url(string base64)
+    private static string? ConvertToBase64Url(string base64)
     {
-        if (string.IsNullOrEmpty(base64))
-            return string.Empty;
+        try
+        {
+            var hashBytes = Convert.FromBase64String(base64);
+            if (hashBytes.Length != 32)
+                return null;
 
-        return base64.Replace("+", "-").Replace("/", "_").TrimEnd('=');
+            return Convert.ToBase64String(hashBytes)
+                .Replace("+", "-")
+                .Replace("/", "_")
+                .TrimEnd('=');
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
     }
+
+    private static bool IsNip(string nip) =>
+        nip.Length == 10 && nip.All(char.IsDigit);
 }

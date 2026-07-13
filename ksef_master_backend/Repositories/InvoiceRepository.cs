@@ -22,13 +22,6 @@ public class InvoiceRepository : IInvoiceRepository
             .ToListAsync();
     }
 
-    public async Task<Invoice?> GetByKsefReferenceNumberAsync(string ksefReferenceNumber)
-    {
-        return await _db.Invoices
-            .AsNoTracking()
-            .FirstOrDefaultAsync(i => i.KsefReferenceNumber == ksefReferenceNumber);
-    }
-
     public async Task<DateTime?> GetLatestAcquisitionTimestampAsync(int companyProfileId, string direction)
     {
         return await _db.Invoices
@@ -49,18 +42,33 @@ public class InvoiceRepository : IInvoiceRepository
         if (invoices.Count == 0)
             return;
 
+        var companyProfileIds = invoices
+            .Select(i => i.CompanyProfileId)
+            .Distinct()
+            .ToList();
+        var ksefNumbers = invoices
+            .Select(i => i.KsefReferenceNumber)
+            .Distinct()
+            .ToList();
+        var existingByNumber = await _db.Invoices
+            .Where(i => companyProfileIds.Contains(i.CompanyProfileId) &&
+                        ksefNumbers.Contains(i.KsefReferenceNumber))
+            .ToDictionaryAsync(i => (i.CompanyProfileId, i.KsefReferenceNumber));
+
         foreach (var invoice in invoices)
         {
-            var existing = await _db.Invoices
-                .FirstOrDefaultAsync(i => i.KsefReferenceNumber == invoice.KsefReferenceNumber);
-
-            if (existing == null)
+            var key = (invoice.CompanyProfileId, invoice.KsefReferenceNumber);
+            if (!existingByNumber.TryGetValue(key, out var existing))
             {
                 invoice.CompanyProfile = null!;
                 _db.Invoices.Add(invoice);
+                existingByNumber[key] = invoice;
             }
             else
             {
+                existing.Nip = invoice.Nip;
+                existing.InvoiceType = invoice.InvoiceType;
+                existing.Direction = invoice.Direction;
                 existing.InvoiceNumber = invoice.InvoiceNumber;
                 existing.SellerNip = invoice.SellerNip;
                 existing.SellerName = invoice.SellerName;
@@ -71,7 +79,12 @@ public class InvoiceRepository : IInvoiceRepository
                 existing.GrossAmount = invoice.GrossAmount;
                 existing.Currency = invoice.Currency;
                 existing.InvoiceDate = invoice.InvoiceDate;
+                existing.InvoicingDate = invoice.InvoicingDate;
+                existing.AcquisitionTimestamp = invoice.AcquisitionTimestamp;
+                existing.PermanentStorageDate = invoice.PermanentStorageDate;
                 existing.XmlContent = invoice.XmlContent;
+                existing.InvoiceHash = invoice.InvoiceHash;
+                existing.KsefEnvironment = invoice.KsefEnvironment;
                 existing.SyncedAt = DateTime.UtcNow;
             }
         }

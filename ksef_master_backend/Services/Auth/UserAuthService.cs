@@ -4,11 +4,16 @@ using KSeF.Backend.Models.Requests;
 using KSeF.Backend.Models.Responses;
 using KSeF.Backend.Repositories;
 using KSeF.Backend.Services.Interfaces.Auth;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace KSeF.Backend.Services.Auth;
 
 public class UserAuthService : IUserAuthService
 {
+    private static readonly string DummyPasswordHash = BCrypt.Net.BCrypt.HashPassword(
+        "timing-normalization-password-not-used-for-login");
+
     private readonly IUserRepository _userRepository;
     private readonly IJwtService _jwtService;
     private readonly ILogger<UserAuthService> _logger;
@@ -42,9 +47,17 @@ public class UserAuthService : IUserAuthService
             CreatedAt = DateTime.UtcNow
         };
 
-        await _userRepository.CreateAsync(user);
+        try
+        {
+            await _userRepository.CreateAsync(user);
+        }
+        catch (DbUpdateException ex) when (
+            ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            return Fail("Konto z tym adresem email już istnieje");
+        }
 
-        _logger.LogInformation("User registered: {Email}", emailLower);
+        _logger.LogInformation("User registered: {UserId}", user.Id);
 
         return new AppAuthResult
         {
@@ -59,12 +72,17 @@ public class UserAuthService : IUserAuthService
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             return Fail("Email i hasło są wymagane");
 
-        var user = await _userRepository.GetByEmailAsync(request.Email);
-
-        if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        if (request.Email.Length > 256 || request.Password.Length > 128)
             return Fail("Nieprawidłowy email lub hasło");
 
-        _logger.LogInformation("User logged in: {Email}", user.Email);
+        var user = await _userRepository.GetByEmailAsync(request.Email);
+        var passwordHash = user?.PasswordHash ?? DummyPasswordHash;
+        var passwordMatches = BCrypt.Net.BCrypt.Verify(request.Password, passwordHash);
+
+        if (user == null || !passwordMatches)
+            return Fail("Nieprawidłowy email lub hasło");
+
+        _logger.LogInformation("User logged in: {UserId}", user.Id);
 
         return new AppAuthResult
         {
@@ -93,6 +111,8 @@ public class UserAuthService : IUserAuthService
             errors.Add("Hasło jest wymagane");
         else if (request.Password.Length < 8)
             errors.Add("Hasło musi mieć co najmniej 8 znaków");
+        else if (request.Password.Length > 128)
+            errors.Add("Hasło może mieć maksymalnie 128 znaków");
 
         if (string.IsNullOrWhiteSpace(request.Name))
             errors.Add("Imię i nazwisko jest wymagane");
