@@ -11,23 +11,21 @@ namespace KSeF_Backend.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "InvoiceHash",
-                table: "Invoices",
-                type: "text",
-                nullable: true);
+            // Some production databases already contain one or more of these
+            // columns, but do not have this migration recorded in EF history.
+            // Keep the migration safe for both fresh and partially-aligned
+            // databases without dropping or overwriting existing data.
+            migrationBuilder.Sql(
+                """
+                ALTER TABLE "Invoices"
+                    ADD COLUMN IF NOT EXISTS "InvoiceHash" text;
 
-            migrationBuilder.AddColumn<DateTime>(
-                name: "InvoicingDate",
-                table: "Invoices",
-                type: "timestamp with time zone",
-                nullable: true);
+                ALTER TABLE "Invoices"
+                    ADD COLUMN IF NOT EXISTS "InvoicingDate" timestamp with time zone;
 
-            migrationBuilder.AddColumn<DateTime>(
-                name: "PermanentStorageDate",
-                table: "Invoices",
-                type: "timestamp with time zone",
-                nullable: true);
+                ALTER TABLE "Invoices"
+                    ADD COLUMN IF NOT EXISTS "PermanentStorageDate" timestamp with time zone;
+                """);
         }
 
         /// <inheritdoc />
